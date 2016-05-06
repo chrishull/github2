@@ -1,0 +1,38 @@
+the uart routines are near the bottom.
+this device was meant to send a control string in strange format to our
+device.
+It used a few bytes of data entered via a serial port to generate control
+signals. it then sent the returned data back to the terminal.
+
+if a key was pressed, the 'recieve from terminal' code would enter a mode
+where it would let you type data into it's buffer. if you stopped long
+enough
+for the watchdog to time out, it would drop back into sending and recieving
+data.
+
+the first character was tossed out, a it was merely used to get attention.
+the 16F84 interrupt input was used for the incoming data.
+
+***** IF YOU USE THE 'SIMPLE' INTERFACE TO THE PC, THEN YOU MUST INVERT
+***** ALL DATA POLARITY!  THIS UNIT USED A MAX-232 BUFFER WHICH INVERTS
+***** THE DATA. The changes are simple to make however..
+
+
+Of course, the PIC gnd and the PC Serial Port GND are connected, not shown.
+
+--------+
+     IN |----[10K]-------PC TXD PIN
+PIC     |
+    OUT |------+---------PC RXD PIN
+--------+      |
+               +--[680 or 1K]---+
+                                |
+                              _____
+                               ___
+                                _
+
+				
+by Mike O'Hara  (dolphin)
+
+
+
