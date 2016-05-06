@@ -1,0 +1,574 @@
+
+Neutron Redo!!
+
+================================================
+Remove Neutron Packages
+WITHOUT removing dependencies like Nova
+================================================
+
+Save all conf files in 
+/home/sleestack/installed-openstack-conf
+
+
+See packages installed in
+Opetion 1
+http://docs.openstack.org/liberty/install-guide-rdo/neutron-controller-install-option1.html
+Option 2
+http://docs.openstack.org/liberty/install-guide-rdo/neutron-controller-install-option2.html
+
+BOTH DO THIS.
+yum install openstack-neutron openstack-neutron-ml2 \
+  openstack-neutron-linuxbridge python-neutronclient ebtables ipset
+  
+SO WE DO NOT DO THIS BECAUSE IT WILL KILL NOVA TOO
+yum erase openstack-neutron openstack-neutron-ml2 \
+  openstack-neutron-linuxbridge python-neutronclient ebtables ipset
+  
+FORCE a REINSTALL without touching the rest of the universe.
+rpm -e --nodeps PACKAGE
+yum install PACKAGE
+
+rpm -e --nodeps openstack-neutron openstack-neutron-ml2 \
+  openstack-neutron-linuxbridge python-neutronclient ebtables ipset
+  
+[root@maersk src]# rpm -e --nodeps openstack-neutron openstack-neutron-ml2 \
+>   openstack-neutron-linuxbridge python-neutronclient ebtables ipset
+
+rm -rf /etc/neutron  
+
+yum install openstack-neutron openstack-neutron-ml2 \
+  openstack-neutron-linuxbridge python-neutronclient ebtables ipset
+  
+=============================================================================================================================
+ Package                                 Arch             Version                   Repository                          Size
+=============================================================================================================================
+Installing:
+ ebtables                                x86_64           2.0.10-13.el7             base                               122 k
+ ipset                                   x86_64           6.19-4.el7                base                                36 k
+ openstack-neutron                       noarch           1:7.0.1-1.el7             centos-openstack-liberty            27 k
+ openstack-neutron-linuxbridge           noarch           1:7.0.1-1.el7             centos-openstack-liberty            12 k
+ openstack-neutron-ml2                   noarch           1:7.0.1-1.el7             centos-openstack-liberty            15 k
+ python-neutronclient                    noarch           3.1.0-1.el7               centos-openstack-liberty           182 k
+
+Transaction Summary
+=============================================================================================================================
+Install  6 Packages
+
+================================================
+ERASE and RECREATE DB
+================================================
+  
+mysql -u root -p
+openg00dle232
+
+CREATE DATABASE neutron;
+GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'localhost' IDENTIFIED BY 'sleestack191';
+GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'%' IDENTIFIED BY 'sleestack191';
+
+  
+CHOOSE ONE OF THE TWO NETWORKING OPTIOINS.  DO NOT CHOOSE OPTION 1
+AND THEN OPTION 2 AS I DID BEFORE.
+================================================
+Check Config Files for Option 2
+================================================
+
+Updated Pluto and crated lib-neu2-opt2-controller-install.txt
+
+BatchFileProcessor Updating configuration file: neutron.conf
+BatchFileProcessor Updating configuration file: ml2_conf.ini
+BatchFileProcessor Updating configuration file: linuxbridge_agent.ini
+BatchFileProcessor Updating configuration file: l3_agent.ini
+BatchFileProcessor Updating configuration file: dhcp_agent.ini
+BatchFileProcessor Updating configuration file: metadata_agent.ini
+BatchFileProcessor Updating configuration file: nova.conf
++-------------------+------------------+-----------------------------------------------------+
+| l3_agent: Section | Key              | Value                                               |
++-------------------+------------------+-----------------------------------------------------+
+| DEFAULT           | verbose          | True                                                |
+| DEFAULT           | interface_driver | neutron.agent.linux.interface.BridgeInterfaceDriver |
++-------------------+------------------+-----------------------------------------------------+
++-------------------+----------------------+--------------------------+
+| ml2_conf: Section | Key                  | Value                    |
++-------------------+----------------------+--------------------------+
+| ml2               | extension_drivers    | port_security            |
+| ml2               | mechanism_drivers    | linuxbridge,l2population |
+| ml2               | tenant_network_types | vxlan                    |
+| ml2               | type_drivers         | flat,vlan,vxlan          |
+| ml2_type_flat     | flat_networks        | public                   |
+| ml2_type_vxlan    | vni_ranges           | 1:1000                   |
+| securitygroup     | enable_ipset         | True                     |
++-------------------+----------------------+--------------------------+
++-----------------------+------------------------------------+-------------------------------------------------+
+| neutron: Section      | Key                                | Value                                           |
++-----------------------+------------------------------------+-------------------------------------------------+
+| database              | connection                         | mysql://neutron:sleestack191@controller/neutron |
+| DEFAULT               | verbose                            | True                                            |
+| DEFAULT               | nova_url                           | http://controller:8774/v2                       |
+| DEFAULT               | notify_nova_on_port_data_changes   | True                                            |
+| DEFAULT               | notify_nova_on_port_status_changes | True                                            |
+| DEFAULT               | auth_strategy                      | keystone                                        |
+| DEFAULT               | rpc_backend                        | rabbit                                          |
+| DEFAULT               | allow_overlapping_ips              | True                                            |
+| DEFAULT               | service_plugins                    | router                                          |
+| DEFAULT               | core_plugin                        | ml2                                             |
+| oslo_messaging_rabbit | rabbit_password                    | open.g00dke232                                  |
+| oslo_messaging_rabbit | rabbit_userid                      | openstack                                       |
+| oslo_messaging_rabbit | rabbit_host                        | controller                                      |
+| keystone_authtoken    | password                           | mk4968small23buggidntpass                       |
+| keystone_authtoken    | username                           | neutron                                         |
+| keystone_authtoken    | project_name                       | service                                         |
+| keystone_authtoken    | user_domain_id                     | default                                         |
+| keystone_authtoken    | project_domain_id                  | default                                         |
+| keystone_authtoken    | auth_plugin                        | password                                        |
+| keystone_authtoken    | auth_url                           | http://controller:35357                         |
+| keystone_authtoken    | auth_uri                           | http://controller:5000                          |
+| nova                  | password                           | mk4968small23buggidntpass                       |
+| nova                  | username                           | nova                                            |
+| nova                  | project_name                       | service                                         |
+| nova                  | region_name                        | RegionOne                                       |
+| nova                  | user_domain_id                     | default                                         |
+| nova                  | project_domain_id                  | default                                         |
+| nova                  | auth_plugin                        | password                                        |
+| nova                  | auth_url                           | http://controller:35357                         |
+| oslo_concurrency      | lock_path                          | /var/lib/neutron/tmp                            |
++-----------------------+------------------------------------+-------------------------------------------------+
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linuxbridge_agent: Section | Key                         | Value                                                        |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linux_bridge               | physical_interface_mappings | public:enp3s0                                                |
+| vxlan                      | l2_population               | True                                                         |
+| vxlan                      | local_ip                    | 172.22.10.99                                                 |
+| vxlan                      | enable_vxlan                | True                                                         |
+| agent                      | prevent_arp_spoofing        | True                                                         |
+| securitygroup              | firewall_driver             | neutron.agent.linux.iptables_firewall.IptablesFirewallDriver |
+| securitygroup              | enable_security_group       | True                                                         |
++----------------------------+-----------------------------+--------------------------------------------------------------+
++-----------------------+-------------------------------+----------------------------------------------------------+
+| nova: Section         | Key                           | Value                                                    |
++-----------------------+-------------------------------+----------------------------------------------------------+
+| DEFAULT               | verbose                       | True                                                     |
+| DEFAULT               | enabled_apis                  | osapi_compute,metadata                                   |
+| DEFAULT               | firewall_driver               | nova.virt.firewall.NoopFirewallDriver                    |
+| DEFAULT               | linuxnet_interface_driver     | nova.network.linux_net.NeutronLinuxBridgeInterfaceDriver |
+| DEFAULT               | security_group_api            | neutron                                                  |
+| DEFAULT               | network_api_class             | nova.network.neutronv2.api.API                           |
+| DEFAULT               | my_ip                         | 172.22.10.99                                             |
+| DEFAULT               | auth_strategy                 | keystone                                                 |
+| DEFAULT               | rpc_backend                   | rabbit                                                   |
+| database              | connection                    | mysql://nova:sleestack191@controller/nova                |
+| glance                | host                          | controller                                               |
+| keystone_authtoken    | password                      | mk4968small23buggidntpass                                |
+| keystone_authtoken    | username                      | nova                                                     |
+| keystone_authtoken    | project_name                  | service                                                  |
+| keystone_authtoken    | user_domain_id                | default                                                  |
+| keystone_authtoken    | project_domain_id             | default                                                  |
+| keystone_authtoken    | auth_plugin                   | password                                                 |
+| keystone_authtoken    | auth_url                      | http://controller:35357                                  |
+| keystone_authtoken    | auth_uri                      | http://controller:5000                                   |
+| neutron               | metadata_proxy_shared_secret  | sekritsqsnuts                                            |
+| neutron               | service_metadata_proxy        | True                                                     |
+| neutron               | password                      | mk4968small23buggidntpass                                |
+| neutron               | username                      | neutron                                                  |
+| neutron               | project_name                  | service                                                  |
+| neutron               | region_name                   | RegionOne                                                |
+| neutron               | user_domain_id                | default                                                  |
+| neutron               | project_domain_id             | default                                                  |
+| neutron               | auth_plugin                   | password                                                 |
+| neutron               | auth_url                      | http://controller:35357                                  |
+| neutron               | url                           | http://controller:9696                                   |
+| oslo_concurrency      | lock_path                     | /var/lib/nova/tmp                                        |
+| oslo_messaging_rabbit | rabbit_password               | open.g00dke232                                           |
+| oslo_messaging_rabbit | rabbit_userid                 | openstack                                                |
+| oslo_messaging_rabbit | rabbit_host                   | controller                                               |
+| vnc                   | novncproxy_base_url           | http://controller:6080/vnc_auto.html                     |
+| vnc                   | enabled                       | True                                                     |
+| vnc                   | vncserver_proxyclient_address | $my_ip                                                   |
+| vnc                   | vncserver_listen              | 0.0.0.0                                                  |
++-----------------------+-------------------------------+----------------------------------------------------------+
++---------------------+--------------------------+-----------------------------------------------------+
+| dhcp_agent: Section | Key                      | Value                                               |
++---------------------+--------------------------+-----------------------------------------------------+
+| DEFAULT             | dnsmasq_config_file      | /etc/neutron/dnsmasq-neutron.conf                   |
+| DEFAULT             | verbose                  | True                                                |
+| DEFAULT             | enable_isolated_metadata | True                                                |
+| DEFAULT             | dhcp_driver              | neutron.agent.linux.dhcp.Dnsmasq                    |
+| DEFAULT             | interface_driver         | neutron.agent.linux.interface.BridgeInterfaceDriver |
++---------------------+--------------------------+-----------------------------------------------------+
++-------------------------+------------------------------+---------------------------+
+| metadata_agent: Section | Key                          | Value                     |
++-------------------------+------------------------------+---------------------------+
+| DEFAULT                 | verbose                      | True                      |
+| DEFAULT                 | metadata_proxy_shared_secret | sekritsqsnuts             |
+| DEFAULT                 | nova_metadata_ip             | controller                |
+| DEFAULT                 | password                     | mk4968small23buggidntpass |
+| DEFAULT                 | username                     | neutron                   |
+| DEFAULT                 | project_name                 | service                   |
+| DEFAULT                 | user_domain_id               | default                   |
+| DEFAULT                 | project_domain_id            | default                   |
+| DEFAULT                 | auth_plugin                  | password                  |
+| DEFAULT                 | auth_uri                     | http://controller:5000    |
+| DEFAULT                 | auth_url                     | http://controller:35357   |
+| DEFAULT                 | auth_region                  | RegionOne                 |
+| DEFAULT                 | admin_tenant_name            |  %SERVICE_TENANT_NAME%    |
+| DEFAULT                 | admin_user                   |  %SERVICE_USER%           |
+| DEFAULT                 | admin_password               |  %SERVICE_PASSWORD%       |
++-------------------------+------------------------------+---------------------------+
+-------------------------------------------------
+IT IS IMPORTANT THAT YOU FOLLOW THESE POST CONFIG INSTRUCTIONS
+NEUTRON IS ONE OF THE MORE COMPLICATED SERVICES TO CONFIGURE.
+In file /etc/neutron/neutron.conf
+Make sure [keystone_authtoken] has ONLY these values...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = neutron
+password = <NEUTRON_PASS>
+In file /etc/neutron/l3_agent.ini
+double check that [DEFAULT] contains external_network_bridge = (nothing)
+IMPORTANT  CREATE THE FILE /etc/neutron/dnsmasq-neutron.conf
+enable the DHCP MTU option (26) and configure it to 1450 bytes:
+Add this line to file /etc/neutron/dnsmasq-neutron.conf
+dhcp-option-force=26,1450
+Create the symlink
+ln -s /etc/neutron/plugins/ml2/ml2_conf.ini /etc/neutron/plugin.ini
+
+
+
+ACTUAL CONF
+
+
+BatchFileProcessor Updating configuration file: neutron.conf
+BatchFileProcessor Updating configuration file: ml2_conf.ini
+BatchFileProcessor Updating configuration file: linuxbridge_agent.ini
+BatchFileProcessor Updating configuration file: l3_agent.ini
+BatchFileProcessor Updating configuration file: dhcp_agent.ini
+BatchFileProcessor Updating configuration file: metadata_agent.ini
+BatchFileProcessor Updating configuration file: nova.conf
++---------------------+--------------------------+-----------------------------------------------------+
+| dhcp_agent: Section | Key                      | Value                                               |
++---------------------+--------------------------+-----------------------------------------------------+
+| DEFAULT             | dnsmasq_config_file      | /etc/neutron/dnsmasq-neutron.conf                   |
+| DEFAULT             | verbose                  | True                                                |
+| DEFAULT             | enable_isolated_metadata | True                                                |
+| DEFAULT             | dhcp_driver              | neutron.agent.linux.dhcp.Dnsmasq                    |
+| DEFAULT             | interface_driver         | neutron.agent.linux.interface.BridgeInterfaceDriver |
++---------------------+--------------------------+-----------------------------------------------------+
++-----------------------+------------------------------------+-------------------------------------------------+
+| neutron: Section      | Key                                | Value                                           |
++-----------------------+------------------------------------+-------------------------------------------------+
+| DEFAULT               | verbose                            | True                                            |
+| DEFAULT               | nova_url                           | http://controller:8774/v2                       |
+| DEFAULT               | notify_nova_on_port_data_changes   | True                                            |
+| DEFAULT               | notify_nova_on_port_status_changes | True                                            |
+| DEFAULT               | auth_strategy                      | keystone                                        |
+| DEFAULT               | rpc_backend                        | rabbit                                          |
+| DEFAULT               | allow_overlapping_ips              | True                                            |
+| DEFAULT               | service_plugins                    | router                                          |
+| DEFAULT               | core_plugin                        | ml2                                             |
+| keystone_authtoken    | password                           | mk4968small23buggidntpass                       |
+| keystone_authtoken    | username                           | neutron                                         |
+| keystone_authtoken    | project_name                       | service                                         |
+| keystone_authtoken    | user_domain_id                     | default                                         |
+| keystone_authtoken    | project_domain_id                  | default                                         |
+| keystone_authtoken    | auth_plugin                        | password                                        |
+| keystone_authtoken    | auth_url                           | http://controller:35357                         |
+| keystone_authtoken    | auth_uri                           | http://controller:5000                          |
+| keystone_authtoken    | identity_uri                       |  http://127.0.0.1:5000                          |
+| keystone_authtoken    | admin_tenant_name                  |  %SERVICE_TENANT_NAME%                          |
+| keystone_authtoken    | admin_user                         |  %SERVICE_USER%                                 |
+| keystone_authtoken    | admin_password                     |  %SERVICE_PASSWORD%                             |
+| database              | connection                         | mysql://neutron:sleestack191@controller/neutron |
+| nova                  | password                           | mk4968small23buggidntpass                       |
+| nova                  | username                           | nova                                            |
+| nova                  | project_name                       | service                                         |
+| nova                  | region_name                        | RegionOne                                       |
+| nova                  | user_domain_id                     | default                                         |
+| nova                  | project_domain_id                  | default                                         |
+| nova                  | auth_plugin                        | password                                        |
+| nova                  | auth_url                           | http://controller:35357                         |
+| oslo_concurrency      | lock_path                          | /var/lib/neutron/tmp                            |
+| oslo_messaging_rabbit | rabbit_password                    | open.g00dke232                                  |
+| oslo_messaging_rabbit | rabbit_userid                      | openstack                                       |
+| oslo_messaging_rabbit | rabbit_host                        | controller                                      |
++-----------------------+------------------------------------+-------------------------------------------------+
++-------------------------+------------------------------+---------------------------+
+| metadata_agent: Section | Key                          | Value                     |
++-------------------------+------------------------------+---------------------------+
+| DEFAULT                 | verbose                      | True                      |
+| DEFAULT                 | metadata_proxy_shared_secret | sekritsqsnuts             |
+| DEFAULT                 | nova_metadata_ip             | controller                |
+| DEFAULT                 | password                     | mk4968small23buggidntpass |
+| DEFAULT                 | username                     | neutron                   |
+| DEFAULT                 | project_name                 | service                   |
+| DEFAULT                 | user_domain_id               | default                   |
+| DEFAULT                 | project_domain_id            | default                   |
+| DEFAULT                 | auth_plugin                  | password                  |
+| DEFAULT                 | auth_uri                     | http://controller:5000    |
+| DEFAULT                 | auth_url                     | http://controller:35357   |
+| DEFAULT                 | auth_region                  | RegionOne                 |
+| DEFAULT                 | admin_tenant_name            | admin                     |
+| DEFAULT                 | admin_user                   | admin                     |
+| DEFAULT                 | admin_password               | mk4968small23buggidntpass |
++-------------------------+------------------------------+---------------------------+
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linuxbridge_agent: Section | Key                         | Value                                                        |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linux_bridge               | physical_interface_mappings | public:enp3s0                                                |
+| vxlan                      | l2_population               | True                                                         |
+| vxlan                      | local_ip                    | 172.22.10.99                                                 |
+| vxlan                      | enable_vxlan                | True                                                         |
+| agent                      | prevent_arp_spoofing        | True                                                         |
+| securitygroup              | firewall_driver             | neutron.agent.linux.iptables_firewall.IptablesFirewallDriver |
+| securitygroup              | enable_security_group       | True                                                         |
++----------------------------+-----------------------------+--------------------------------------------------------------+
++-------------------+------------------+-----------------------------------------------------+
+| l3_agent: Section | Key              | Value                                               |
++-------------------+------------------+-----------------------------------------------------+
+| DEFAULT           | verbose          | True                                                |
+| DEFAULT           | interface_driver | neutron.agent.linux.interface.BridgeInterfaceDriver |
++-------------------+------------------+-----------------------------------------------------+
++-------------------+----------------------+--------------------------+
+| ml2_conf: Section | Key                  | Value                    |
++-------------------+----------------------+--------------------------+
+| ml2               | extension_drivers    | port_security            |
+| ml2               | mechanism_drivers    | linuxbridge,l2population |
+| ml2               | tenant_network_types | vxlan                    |
+| ml2               | type_drivers         | flat,vlan,vxlan          |
+| ml2_type_flat     | flat_networks        | public                   |
+| ml2_type_vxlan    | vni_ranges           | 1:1000                   |
+| securitygroup     | enable_ipset         | True                     |
++-------------------+----------------------+--------------------------+
++-----------------------+-------------------------------+----------------------------------------------------------+
+| nova: Section         | Key                           | Value                                                    |
++-----------------------+-------------------------------+----------------------------------------------------------+
+| DEFAULT               | verbose                       | True                                                     |
+| DEFAULT               | enabled_apis                  | osapi_compute,metadata                                   |
+| DEFAULT               | firewall_driver               | nova.virt.firewall.NoopFirewallDriver                    |
+| DEFAULT               | linuxnet_interface_driver     | nova.network.linux_net.NeutronLinuxBridgeInterfaceDriver |
+| DEFAULT               | security_group_api            | neutron                                                  |
+| DEFAULT               | network_api_class             | nova.network.neutronv2.api.API                           |
+| DEFAULT               | my_ip                         | 172.22.10.99                                             |
+| DEFAULT               | auth_strategy                 | keystone                                                 |
+| DEFAULT               | rpc_backend                   | rabbit                                                   |
+| database              | connection                    | mysql://nova:sleestack191@controller/nova                |
+| glance                | host                          | controller                                               |
+| keystone_authtoken    | password                      | mk4968small23buggidntpass                                |
+| keystone_authtoken    | username                      | nova                                                     |
+| keystone_authtoken    | project_name                  | service                                                  |
+| keystone_authtoken    | user_domain_id                | default                                                  |
+| keystone_authtoken    | project_domain_id             | default                                                  |
+| keystone_authtoken    | auth_plugin                   | password                                                 |
+| keystone_authtoken    | auth_url                      | http://controller:35357                                  |
+| keystone_authtoken    | auth_uri                      | http://controller:5000                                   |
+| neutron               | metadata_proxy_shared_secret  | sekritsqsnuts                                            |
+| neutron               | service_metadata_proxy        | True                                                     |
+| neutron               | password                      | mk4968small23buggidntpass                                |
+| neutron               | username                      | neutron                                                  |
+| neutron               | project_name                  | service                                                  |
+| neutron               | region_name                   | RegionOne                                                |
+| neutron               | user_domain_id                | default                                                  |
+| neutron               | project_domain_id             | default                                                  |
+| neutron               | auth_plugin                   | password                                                 |
+| neutron               | auth_url                      | http://controller:35357                                  |
+| neutron               | url                           | http://controller:9696                                   |
+| oslo_concurrency      | lock_path                     | /var/lib/nova/tmp                                        |
+| oslo_messaging_rabbit | rabbit_password               | open.g00dke232                                           |
+| oslo_messaging_rabbit | rabbit_userid                 | openstack                                                |
+| oslo_messaging_rabbit | rabbit_host                   | controller                                               |
+| vnc                   | novncproxy_base_url           | http://controller:6080/vnc_auto.html                     |
+| vnc                   | enabled                       | True                                                     |
+| vnc                   | vncserver_proxyclient_address | $my_ip                                                   |
+| vnc                   | vncserver_listen              | 0.0.0.0                                                  |
++-----------------------+-------------------------------+----------------------------------------------------------+
+-------------------------------------------------
+IT IS IMPORTANT THAT YOU FOLLOW THESE POST CONFIG INSTRUCTIONS
+NEUTRON IS ONE OF THE MORE COMPLICATED SERVICES TO CONFIGURE.
+In file /etc/neutron/neutron.conf
+Make sure [keystone_authtoken] has ONLY these values...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = neutron
+password = <NEUTRON_PASS>
+In file /etc/neutron/l3_agent.ini
+double check that [DEFAULT] contains external_network_bridge = (nothing)
+IMPORTANT  CREATE THE FILE /etc/neutron/dnsmasq-neutron.conf
+enable the DHCP MTU option (26) and configure it to 1450 bytes:
+Add this line to file /etc/neutron/dnsmasq-neutron.conf
+dhcp-option-force=26,1450
+Create the symlink
+ln -s /etc/neutron/plugins/ml2/ml2_conf.ini /etc/neutron/plugin.ini
+
+
+
+
+
+
+
+
+
+
+
+
+=================================================================
+REPOPULATE and hope this works
+
+su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf \
+  --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron
+
+[root@maersk src]# su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf \
+>   --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron
+No handlers could be found for logger "neutron.quota"
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+
+  Running upgrade for neutron ...
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> juno, juno_initial
+INFO  [alembic.runtime.migration] Running upgrade juno -> 44621190bc02, add_uniqueconstraint_ipavailability_ranges
+INFO  [alembic.runtime.migration] Running upgrade 44621190bc02 -> 1f71e54a85e7, ml2_network_segments models change for multi-segment network.
+INFO  [alembic.runtime.migration] Running upgrade 1f71e54a85e7 -> 408cfbf6923c, remove ryu plugin
+INFO  [alembic.runtime.migration] Running upgrade 408cfbf6923c -> 28c0ffb8ebbd, remove mlnx plugin
+INFO  [alembic.runtime.migration] Running upgrade 28c0ffb8ebbd -> 57086602ca0a, scrap_nsx_adv_svcs_models
+INFO  [alembic.runtime.migration] Running upgrade 57086602ca0a -> 38495dc99731, ml2_tunnel_endpoints_table
+INFO  [alembic.runtime.migration] Running upgrade 38495dc99731 -> 4dbe243cd84d, nsxv
+INFO  [alembic.runtime.migration] Running upgrade 4dbe243cd84d -> 41662e32bce2, L3 DVR SNAT mapping
+INFO  [alembic.runtime.migration] Running upgrade 41662e32bce2 -> 2a1ee2fb59e0, Add mac_address unique constraint
+INFO  [alembic.runtime.migration] Running upgrade 2a1ee2fb59e0 -> 26b54cf9024d, Add index on allocated
+INFO  [alembic.runtime.migration] Running upgrade 26b54cf9024d -> 14be42f3d0a5, Add default security group table
+INFO  [alembic.runtime.migration] Running upgrade 14be42f3d0a5 -> 16cdf118d31d, extra_dhcp_options IPv6 support
+INFO  [alembic.runtime.migration] Running upgrade 16cdf118d31d -> 43763a9618fd, add mtu attributes to network
+INFO  [alembic.runtime.migration] Running upgrade 43763a9618fd -> bebba223288, Add vlan transparent property to network
+INFO  [alembic.runtime.migration] Running upgrade bebba223288 -> 4119216b7365, Add index on tenant_id column
+INFO  [alembic.runtime.migration] Running upgrade 4119216b7365 -> 2d2a8a565438, ML2 hierarchical binding
+INFO  [alembic.runtime.migration] Running upgrade 2d2a8a565438 -> 2b801560a332, Remove Hyper-V Neutron Plugin
+INFO  [alembic.runtime.migration] Running upgrade 2b801560a332 -> 57dd745253a6, nuage_kilo_migrate
+INFO  [alembic.runtime.migration] Running upgrade 57dd745253a6 -> f15b1fb526dd, Cascade Floating IP Floating Port deletion
+INFO  [alembic.runtime.migration] Running upgrade f15b1fb526dd -> 341ee8a4ccb5, sync with cisco repo
+INFO  [alembic.runtime.migration] Running upgrade 341ee8a4ccb5 -> 35a0f3365720, add port-security in ml2
+INFO  [alembic.runtime.migration] Running upgrade 35a0f3365720 -> 1955efc66455, weight_scheduler
+INFO  [alembic.runtime.migration] Running upgrade 1955efc66455 -> 51c54792158e, Initial operations for subnetpools
+INFO  [alembic.runtime.migration] Running upgrade 51c54792158e -> 589f9237ca0e, Cisco N1kv ML2 driver tables
+INFO  [alembic.runtime.migration] Running upgrade 589f9237ca0e -> 20b99fd19d4f, Cisco UCS Manager Mechanism Driver
+INFO  [alembic.runtime.migration] Running upgrade 20b99fd19d4f -> 034883111f, Remove allow_overlap from subnetpools
+INFO  [alembic.runtime.migration] Running upgrade 034883111f -> 268fb5e99aa2, Initial operations in support of subnet allocation from a pool
+INFO  [alembic.runtime.migration] Running upgrade 268fb5e99aa2 -> 28a09af858a8, Initial operations to support basic quotas on prefix space in a subnet pool
+INFO  [alembic.runtime.migration] Running upgrade 28a09af858a8 -> 20c469a5f920, add index for port
+INFO  [alembic.runtime.migration] Running upgrade 20c469a5f920 -> kilo, kilo
+INFO  [alembic.runtime.migration] Running upgrade kilo -> 354db87e3225, nsxv_vdr_metadata.py
+INFO  [alembic.runtime.migration] Running upgrade 354db87e3225 -> 599c6a226151, neutrodb_ipam
+INFO  [alembic.runtime.migration] Running upgrade 599c6a226151 -> 52c5312f6baf, Initial operations in support of address scopes
+INFO  [alembic.runtime.migration] Running upgrade 52c5312f6baf -> 313373c0ffee, Flavor framework
+INFO  [alembic.runtime.migration] Running upgrade 313373c0ffee -> 8675309a5c4f, network_rbac
+INFO  [alembic.runtime.migration] Running upgrade kilo -> 30018084ec99, Initial no-op Liberty contract rule.
+INFO  [alembic.runtime.migration] Running upgrade 30018084ec99, 8675309a5c4f -> 4ffceebfada, network_rbac
+INFO  [alembic.runtime.migration] Running upgrade 4ffceebfada -> 5498d17be016, Drop legacy OVS and LB plugin tables
+INFO  [alembic.runtime.migration] Running upgrade 5498d17be016 -> 2a16083502f3, Metaplugin removal
+INFO  [alembic.runtime.migration] Running upgrade 2a16083502f3 -> 2e5352a0ad4d, Add missing foreign keys
+INFO  [alembic.runtime.migration] Running upgrade 2e5352a0ad4d -> 11926bcfe72d, add geneve ml2 type driver
+INFO  [alembic.runtime.migration] Running upgrade 11926bcfe72d -> 4af11ca47297, Drop cisco monolithic tables
+INFO  [alembic.runtime.migration] Running upgrade 8675309a5c4f -> 45f955889773, quota_usage
+INFO  [alembic.runtime.migration] Running upgrade 45f955889773 -> 26c371498592, subnetpool hash
+INFO  [alembic.runtime.migration] Running upgrade 26c371498592 -> 1c844d1677f7, add order to dnsnameservers
+INFO  [alembic.runtime.migration] Running upgrade 1c844d1677f7 -> 1b4c6e320f79, address scope support in subnetpool
+INFO  [alembic.runtime.migration] Running upgrade 1b4c6e320f79 -> 48153cb5f051, qos db changes
+INFO  [alembic.runtime.migration] Running upgrade 48153cb5f051 -> 9859ac9c136, quota_reservations
+INFO  [alembic.runtime.migration] Running upgrade 9859ac9c136 -> 34af2b5c5a59, Add dns_name to Port
+  OK
+[root@maersk src]#   
+  
+  
+ systemctl restart openstack-nova-api.service
+
+  
+systemctl enable neutron-server.service \
+  neutron-linuxbridge-agent.service neutron-dhcp-agent.service \
+  neutron-metadata-agent.service
+systemctl start neutron-server.service \
+  neutron-linuxbridge-agent.service neutron-dhcp-agent.service \
+  neutron-metadata-agent.service
+  
+systemctl enable neutron-l3-agent.service
+systemctl start neutron-l3-agent.service
+
+  
+systemctl stop neutron-server.service \
+  neutron-linuxbridge-agent.service neutron-dhcp-agent.service \
+  neutron-metadata-agent.service
+systemctl stop neutron-l3-agent.service
+
+
+  
+  
+ ===============
+ Verify Operation
+ ===============
+ 
+ 
+[root@maersk src]# source admin-openrc.sh
+[root@maersk src]# neutron ext-list
++-----------------------+-----------------------------------------------+
+| alias                 | name                                          |
++-----------------------+-----------------------------------------------+
+| dns-integration       | DNS Integration                               |
+| ext-gw-mode           | Neutron L3 Configurable external gateway mode |
+| binding               | Port Binding                                  |
+| agent                 | agent                                         |
+| subnet_allocation     | Subnet Allocation                             |
+| l3_agent_scheduler    | L3 Agent Scheduler                            |
+| external-net          | Neutron external network                      |
+| flavors               | Neutron Service Flavors                       |
+| net-mtu               | Network MTU                                   |
+| quotas                | Quota management support                      |
+| l3-ha                 | HA Router extension                           |
+| provider              | Provider Network                              |
+| multi-provider        | Multi Provider Network                        |
+| extraroute            | Neutron Extra Route                           |
+| router                | Neutron L3 Router                             |
+| extra_dhcp_opt        | Neutron Extra DHCP opts                       |
+| security-group        | security-group                                |
+| dhcp_agent_scheduler  | DHCP Agent Scheduler                          |
+| rbac-policies         | RBAC Policies                                 |
+| port-security         | Port Security                                 |
+| allowed-address-pairs | Allowed Address Pairs                         |
+| dvr                   | Distributed Virtual Router                    |
++-----------------------+-----------------------------------------------+
+[root@maersk src]# neutron agent-list
++--------------------------------------+--------------------+--------+-------+----------------+---------------------------+
+| id                                   | agent_type         | host   | alive | admin_state_up | binary                    |
++--------------------------------------+--------------------+--------+-------+----------------+---------------------------+
+| 41974f0e-4342-4027-a771-53443a8d1911 | Metadata agent     | maersk | :-)   | True           | neutron-metadata-agent    |
+| 9f002230-33ea-4523-a736-8d96a96a85f1 | Linux bridge agent | maersk | :-)   | True           | neutron-linuxbridge-agent |
+| ccb8cd1c-6c47-4df9-9e87-4b3b651c3427 | L3 agent           | maersk | :-)   | True           | neutron-l3-agent          |
+| ef5611be-edf3-4565-aaa7-a833bdc79d57 | DHCP agent         | maersk | :-)   | True           | neutron-dhcp-agent        |
++--------------------------------------+--------------------+--------+-------+----------------+---------------------------+
+THIS IS CORRECT   WE DO NOT EXPECT TO SEE COMPUTE cause we dont' have a 
+separate compute node.
+WITH NO OTHER PHYSICAL NEUTRON NOTES THIS IS EXPECTED.  ONE LINUX BRIDGE.
+YOU INSTALL CONTROLLER OR COMPUTE, NOT BOTH.
+ 
+ 
+  ===============
+Next Steps
+Create a Network and Ruter and Ping the Router
+ ===============
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+
+
+

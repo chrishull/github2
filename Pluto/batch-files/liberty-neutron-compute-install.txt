@@ -1,0 +1,126 @@
+# Pluto - Openstack Configuration Manager
+# Batch file for Openstack Liberty Neutron installation
+#
+# This is the Compute portion of the install.
+# http://docs.openstack.org/liberty/install-guide-rdo/neutron-compute-install.html
+# and option 2
+# http://docs.openstack.org/liberty/install-guide-rdo/neutron-compute-install-option2.html
+
+&INSTALL_NOTE Liberty Neutron service compute initial install
+
+################################################
+# Configure the Common Component
+# Edit the /etc/neutron/neutron.conf file and complete the following actions:
+&CONF_FILE_NAME neutron.conf
+
+# In the [database] section, comment out any connection options because 
+# compute nodes do not directly access the database.
+
+# In the [DEFAULT] and [oslo_messaging_rabbit] sections, configure RabbitMQ 
+# message queue access:
+
+[DEFAULT]
+...
+rpc_backend = rabbit
+
+[oslo_messaging_rabbit]
+...
+rabbit_host = controller
+rabbit_userid = openstack
+rabbit_password = RABBIT_PASS
+
+# Replace RABBIT_PASS with the password you chose for the openstack account 
+# in RabbitMQ.
+
+# In the [DEFAULT] and [keystone_authtoken] sections, configure 
+# Identity service access:
+
+[DEFAULT]
+...
+auth_strategy = keystone
+
+[keystone_authtoken]
+...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = neutron
+password = NEUTRON_PASS
+
+# Replace NEUTRON_PASS with the password you chose for the neutron user 
+# in the Identity service.
+# Note
+# Comment out or remove any other options in the [keystone_authtoken] section.
+
+# In the [oslo_concurrency] section, configure the lock path:
+
+[oslo_concurrency]
+...
+lock_path = /var/lib/neutron/tmp
+
+# (Optional) To assist with troubleshooting, enable verbose 
+# logging in the [DEFAULT] section:
+
+[DEFAULT]
+...
+verbose = True
+
+
+
+################################################
+# Configure networking options
+# Choose the same networking option that you chose for the controller node 
+# to configure services specific to it. Afterwards, return here and proceed 
+# to Configure Compute to use Networking.
+
+# Option 2
+# Edit the /etc/neutron/plugins/ml2/linuxbridge_agent.ini file and 
+# complete the following actions:
+&CONF_FILE_NAME linuxbridge_agent.ini
+
+# In the [linux_bridge] section, map the public virtual network to the public 
+# physical network interface:
+
+[linux_bridge]
+physical_interface_mappings = public:PUBLIC_INTERFACE_NAME
+
+# Replace PUBLIC_INTERFACE_NAME with the name of the underlying physical 
+# public network interface.
+
+# In the [vxlan] section, enable VXLAN overlay networks, configure the 
+# IP address of the physical network interface that handles overlay networks, and enable layer-2 population:
+
+[vxlan]
+enable_vxlan = True
+local_ip = OVERLAY_INTERFACE_IP_ADDRESS
+l2_population = True
+
+# Replace OVERLAY_INTERFACE_IP_ADDRESS with the IP address of the underlying 
+# physical network interface that handles overlay networks. The example 
+# architecture uses the management interface to tunnel traffic to the other nodes. 
+# Therefore, replace OVERLAY_INTERFACE_IP_ADDRESS with each node’s own 
+# management IP address.
+
+# In the [agent] section, enable ARP spoofing protection:
+
+[agent]
+...
+prevent_arp_spoofing = True
+
+# In the [securitygroup] section, enable security groups and 
+# configure the Linux bridge iptables firewall driver:
+
+[securitygroup]
+...
+enable_security_group = True
+firewall_driver = neutron.agent.linux.iptables_firewall.IptablesFirewallDriver
+
+
+
+
+
+
+

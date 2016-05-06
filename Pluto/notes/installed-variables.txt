@@ -1,0 +1,32 @@
+
+
+
+========================================================================
+Credentials and other Vars
+========================================================================
+
+
+CONTROLLER_IP 172.22.10.99
+
+DB_ADMIN_PASSWORD   openg00dle232
+
+RABBIT_PASS  open.g00dke232
+
+KEYSTONE_DBPASS  sleestack191
+GLANCE_DBPASS    sleestack191
+
+Identity service paswords are all     mk4968small23buggidntpass      _PASS
+Database passwords all                sleestack191                   _DBPASS
+
+
+ADMIN_PASS  mk4968small23buggidntpass
+GLANCE_
+NOVA_
+
+METADATA_SECRET  sekritsqsnuts
+
+
+
+
+
+

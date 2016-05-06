@@ -1,0 +1,376 @@
+BatchFileProcessor Running installation for: Liberty Neutron CONTROLLER Networking Option 2 install
+BatchFileProcessor Updating configuration file: neutron.conf
+BatchFileProcessor Updating configuration file: ml2_conf.ini
+BatchFileProcessor Updating configuration file: linuxbridge_agent.ini
+BatchFileProcessor Updating configuration file: l3_agent.ini
+BatchFileProcessor Updating configuration file: dhcp_agent.ini
+BatchFileProcessor Updating configuration file: metadata_agent.ini
+BatchFileProcessor Updating configuration file: nova.conf
++-------------------+------------------+-----------------------------------------------------+
+| l3_agent: Section | Key              | Value                                               |
++-------------------+------------------+-----------------------------------------------------+
+| DEFAULT           | verbose          | True                                                |
+| DEFAULT           | interface_driver | neutron.agent.linux.interface.BridgeInterfaceDriver |
++-------------------+------------------+-----------------------------------------------------+
++-----------------------+------------------------------------+-------------------------------------------------+
+| neutron: Section      | Key                                | Value                                           |
++-----------------------+------------------------------------+-------------------------------------------------+
+| database              | connection                         | mysql://neutron:sleestack191@controller/neutron |
+| DEFAULT               | verbose                            | True                                            |
+| DEFAULT               | nova_url                           | http://controller:8774/v2                       |
+| DEFAULT               | notify_nova_on_port_data_changes   | True                                            |
+| DEFAULT               | notify_nova_on_port_status_changes | True                                            |
+| DEFAULT               | auth_strategy                      | keystone                                        |
+| DEFAULT               | rpc_backend                        | rabbit                                          |
+| DEFAULT               | allow_overlapping_ips              | True                                            |
+| DEFAULT               | service_plugins                    | router                                          |
+| DEFAULT               | core_plugin                        | ml2                                             |
+| oslo_messaging_rabbit | rabbit_password                    | open.g00dke232                                  |
+| oslo_messaging_rabbit | rabbit_userid                      | openstack                                       |
+| oslo_messaging_rabbit | rabbit_host                        | controller                                      |
+| keystone_authtoken    | password                           | mk4968small23buggidntpass                       |
+| keystone_authtoken    | username                           | neutron                                         |
+| keystone_authtoken    | project_name                       | service                                         |
+| keystone_authtoken    | user_domain_id                     | default                                         |
+| keystone_authtoken    | project_domain_id                  | default                                         |
+| keystone_authtoken    | auth_plugin                        | password                                        |
+| keystone_authtoken    | auth_url                           | http://controller:35357                         |
+| keystone_authtoken    | auth_uri                           | http://controller:5000                          |
+| nova                  | password                           | mk4968small23buggidntpass                       |
+| nova                  | username                           | nova                                            |
+| nova                  | project_name                       | service                                         |
+| nova                  | region_name                        | RegionOne                                       |
+| nova                  | user_domain_id                     | default                                         |
+| nova                  | project_domain_id                  | default                                         |
+| nova                  | auth_plugin                        | password                                        |
+| nova                  | auth_url                           | http://controller:35357                         |
+| oslo_concurrency      | lock_path                          | /var/lib/neutron/tmp                            |
++-----------------------+------------------------------------+-------------------------------------------------+
++-------------------+----------------------+--------------------------+
+| ml2_conf: Section | Key                  | Value                    |
++-------------------+----------------------+--------------------------+
+| ml2               | extension_drivers    | port_security            |
+| ml2               | mechanism_drivers    | linuxbridge,l2population |
+| ml2               | tenant_network_types | vxlan                    |
+| ml2               | type_drivers         | flat,vlan,vxlan          |
+| ml2_type_flat     | flat_networks        | public                   |
+| ml2_type_vxlan    | vni_ranges           | 1:1000                   |
+| securitygroup     | enable_ipset         | True                     |
++-------------------+----------------------+--------------------------+
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linuxbridge_agent: Section | Key                         | Value                                                        |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linux_bridge               | physical_interface_mappings | public:enp3s0                                                |
+| vxlan                      | l2_population               | True                                                         |
+| vxlan                      | local_ip                    | 172.22.10.99                                                 |
+| vxlan                      | enable_vxlan                | True                                                         |
+| agent                      | prevent_arp_spoofing        | True                                                         |
+| securitygroup              | firewall_driver             | neutron.agent.linux.iptables_firewall.IptablesFirewallDriver |
+| securitygroup              | enable_security_group       | True                                                         |
++----------------------------+-----------------------------+--------------------------------------------------------------+
++---------------+------------------------------+---------------------------+
+| nova: Section | Key                          | Value                     |
++---------------+------------------------------+---------------------------+
+| neutron       | metadata_proxy_shared_secret | sekritsqsnuts             |
+| neutron       | service_metadata_proxy       | True                      |
+| neutron       | password                     | mk4968small23buggidntpass |
+| neutron       | username                     | neutron                   |
+| neutron       | project_name                 | service                   |
+| neutron       | region_name                  | RegionOne                 |
+| neutron       | user_domain_id               | default                   |
+| neutron       | project_domain_id            | default                   |
+| neutron       | auth_plugin                  | password                  |
+| neutron       | auth_url                     | http://controller:35357   |
+| neutron       | url                          | http://controller:9696    |
++---------------+------------------------------+---------------------------+
++---------------------+--------------------------+-----------------------------------------------------+
+| dhcp_agent: Section | Key                      | Value                                               |
++---------------------+--------------------------+-----------------------------------------------------+
+| DEFAULT             | dnsmasq_config_file      | /etc/neutron/dnsmasq-neutron.conf                   |
+| DEFAULT             | verbose                  | True                                                |
+| DEFAULT             | enable_isolated_metadata | True                                                |
+| DEFAULT             | dhcp_driver              | neutron.agent.linux.dhcp.Dnsmasq                    |
+| DEFAULT             | interface_driver         | neutron.agent.linux.interface.BridgeInterfaceDriver |
++---------------------+--------------------------+-----------------------------------------------------+
++-------------------------+------------------------------+---------------------------+
+| metadata_agent: Section | Key                          | Value                     |
++-------------------------+------------------------------+---------------------------+
+| DEFAULT                 | admin_password               | mk4968small23buggidntpass |
+| DEFAULT                 | admin_user                   | admin                     |
+| DEFAULT                 | admin_tenant_name            | admin                     |
+| DEFAULT                 | verbose                      | True                      |
+| DEFAULT                 | metadata_proxy_shared_secret | sekritsqsnuts             |
+| DEFAULT                 | nova_metadata_ip             | controller                |
+| DEFAULT                 | password                     | mk4968small23buggidntpass |
+| DEFAULT                 | username                     | neutron                   |
+| DEFAULT                 | project_name                 | service                   |
+| DEFAULT                 | user_domain_id               | default                   |
+| DEFAULT                 | project_domain_id            | default                   |
+| DEFAULT                 | auth_plugin                  | password                  |
+| DEFAULT                 | auth_region                  | RegionOne                 |
+| DEFAULT                 | auth_url                     | http://controller:35357   |
+| DEFAULT                 | auth_uri                     | http://controller:5000    |
++-------------------------+------------------------------+---------------------------+
+-------------------------------------------------
+IT IS IMPORTANT THAT YOU FOLLOW THESE POST CONFIG INSTRUCTIONS
+NEUTRON IS ONE OF THE MORE COMPLICATED SERVICES TO CONFIGURE.
+In file /etc/neutron/neutron.conf
+Make sure [keystone_authtoken] has ONLY these values...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = neutron
+password = <NEUTRON_PASS>
+In file /etc/neutron/l3_agent.ini
+double check that [DEFAULT] contains external_network_bridge = (nothing)
+IMPORTANT  CREATE THE FILE /etc/neutron/dnsmasq-neutron.conf
+enable the DHCP MTU option (26) and configure it to 1450 bytes:
+Add this line to file /etc/neutron/dnsmasq-neutron.conf
+dhcp-option-force=26,1450
+Create the symlink
+ln -s /etc/neutron/plugins/ml2/ml2_conf.ini /etc/neutron/plugin.ini
+chgrp - seems like a good idea.
+chgrp -R neutron /etc/neutron
+
+
+
+
+
+=====================================================================
+
+
+dhcp-10-156-49-48:src chris$ ./pluto.py process -p ../contrast-test   ../batch-files/liberty-neutron2-option2-compute-install.txt 
+Processing using file: ../batch-files/liberty-neutron2-option2-compute-install.txt
+BatchFileProcessor Processing merge file: ../batch-files/liberty-neutron2-option2-compute-install.txt
+BatchFileProcessor Running installation for: Liberty Neutron COMPUTE Networking Option 2 install
+BatchFileProcessor Updating configuration file: neutron.conf
+BatchFileProcessor Updating configuration file: linuxbridge_agent.ini
+BatchFileProcessor Updating configuration file: nova.conf
++-----------------------+------------------------------------+-------------------------------------------------+
+| neutron: Section      | Key                                | Value                                           |
++-----------------------+------------------------------------+-------------------------------------------------+
+| database              | connection                         | mysql://neutron:sleestack191@controller/neutron |
+| DEFAULT               | verbose                            | True                                            |
+| DEFAULT               | nova_url                           | http://controller:8774/v2                       |
+| DEFAULT               | notify_nova_on_port_data_changes   | True                                            |
+| DEFAULT               | notify_nova_on_port_status_changes | True                                            |
+| DEFAULT               | auth_strategy                      | keystone                                        |
+| DEFAULT               | rpc_backend                        | rabbit                                          |
+| DEFAULT               | allow_overlapping_ips              | True                                            |
+| DEFAULT               | service_plugins                    | router                                          |
+| DEFAULT               | core_plugin                        | ml2                                             |
+| oslo_messaging_rabbit | rabbit_password                    | open.g00dke232                                  |
+| oslo_messaging_rabbit | rabbit_userid                      | openstack                                       |
+| oslo_messaging_rabbit | rabbit_host                        | controller                                      |
+| keystone_authtoken    | password                           | mk4968small23buggidntpass                       |
+| keystone_authtoken    | username                           | neutron                                         |
+| keystone_authtoken    | project_name                       | service                                         |
+| keystone_authtoken    | user_domain_id                     | default                                         |
+| keystone_authtoken    | project_domain_id                  | default                                         |
+| keystone_authtoken    | auth_plugin                        | password                                        |
+| keystone_authtoken    | auth_url                           | http://controller:35357                         |
+| keystone_authtoken    | auth_uri                           | http://controller:5000                          |
+| nova                  | password                           | mk4968small23buggidntpass                       |
+| nova                  | username                           | nova                                            |
+| nova                  | project_name                       | service                                         |
+| nova                  | region_name                        | RegionOne                                       |
+| nova                  | user_domain_id                     | default                                         |
+| nova                  | project_domain_id                  | default                                         |
+| nova                  | auth_plugin                        | password                                        |
+| nova                  | auth_url                           | http://controller:35357                         |
+| oslo_concurrency      | lock_path                          | /var/lib/neutron/tmp                            |
++-----------------------+------------------------------------+-------------------------------------------------+
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linuxbridge_agent: Section | Key                         | Value                                                        |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linux_bridge               | physical_interface_mappings | public:enp3s0                                                |
+| vxlan                      | l2_population               | True                                                         |
+| vxlan                      | local_ip                    | 172.22.10.99                                                 |
+| vxlan                      | enable_vxlan                | True                                                         |
+| agent                      | prevent_arp_spoofing        | True                                                         |
+| securitygroup              | firewall_driver             | neutron.agent.linux.iptables_firewall.IptablesFirewallDriver |
+| securitygroup              | enable_security_group       | True                                                         |
++----------------------------+-----------------------------+--------------------------------------------------------------+
++---------------+------------------------------+---------------------------+
+| nova: Section | Key                          | Value                     |
++---------------+------------------------------+---------------------------+
+| neutron       | metadata_proxy_shared_secret | sekritsqsnuts             |
+| neutron       | service_metadata_proxy       | True                      |
+| neutron       | password                     | mk4968small23buggidntpass |
+| neutron       | username                     | neutron                   |
+| neutron       | project_name                 | service                   |
+| neutron       | region_name                  | RegionOne                 |
+| neutron       | user_domain_id               | default                   |
+| neutron       | project_domain_id            | default                   |
+| neutron       | auth_plugin                  | password                  |
+| neutron       | auth_url                     | http://controller:35357   |
+| neutron       | url                          | http://controller:9696    |
++---------------+------------------------------+---------------------------+
+-------------------------------------------------
+FOLLOW ALL POST CONFIG INSTRUCTIONS
+File /etc/neutron/neutron.conf
+In the [database] section, comment out any connection 
+options because compute nodes do not directly access the database.
+DO NOT DO THIS IF THIS IS ALSO THE NEUTRON CONTROL NODE.
+BECAUSE NEUTRON CONTROL NEEDS THE DB OF COURSE.
+File /etc/neutron/neutron.conf
+Make sure [keystone_authtoken] has only these values
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = neutron
+password = <NEUTRON_PASS>   your password from variables.py
+The virgin version of the file has the followign...
+GET RID OF identity_uri = http://127.0.0.1:5000
+GET RID OF admin_tenant_name = %SERVICE_TENANT_NAME%
+GET RID OF admin_user = %SERVICE_USER%
+GET RID OF admin_password = %SERVICE_PASSWORD%
+
+
+
+=========================================================
+
+Side by Side
+
+Controller
++---------------+------------------------------+---------------------------+
+| nova: Section | Key                          | Value                     |
++---------------+------------------------------+---------------------------+
+| neutron       | metadata_proxy_shared_secret | sekritsqsnuts             |
+| neutron       | service_metadata_proxy       | True                      |
+| neutron       | password                     | mk4968small23buggidntpass |
+| neutron       | username                     | neutron                   |
+| neutron       | project_name                 | service                   |
+| neutron       | region_name                  | RegionOne                 |
+| neutron       | user_domain_id               | default                   |
+| neutron       | project_domain_id            | default                   |
+| neutron       | auth_plugin                  | password                  |
+| neutron       | auth_url                     | http://controller:35357   |
+| neutron       | url                          | http://controller:9696    |
++---------------+------------------------------+---------------------------+
+Compute Identical
++---------------+------------------------------+---------------------------+
+| nova: Section | Key                          | Value                     |
++---------------+------------------------------+---------------------------+
+| neutron       | metadata_proxy_shared_secret | sekritsqsnuts             |
+| neutron       | service_metadata_proxy       | True                      |
+| neutron       | password                     | mk4968small23buggidntpass |
+| neutron       | username                     | neutron                   |
+| neutron       | project_name                 | service                   |
+| neutron       | region_name                  | RegionOne                 |
+| neutron       | user_domain_id               | default                   |
+| neutron       | project_domain_id            | default                   |
+| neutron       | auth_plugin                  | password                  |
+| neutron       | auth_url                     | http://controller:35357   |
+| neutron       | url                          | http://controller:9696    |
++---------------+------------------------------+---------------------------+
+
+
+Controller
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linuxbridge_agent: Section | Key                         | Value                                                        |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linux_bridge               | physical_interface_mappings | public:enp3s0                                                |
+| vxlan                      | l2_population               | True                                                         |
+| vxlan                      | local_ip                    | 172.22.10.99                                                 |
+| vxlan                      | enable_vxlan                | True                                                         |
+| agent                      | prevent_arp_spoofing        | True                                                         |
+| securitygroup              | firewall_driver             | neutron.agent.linux.iptables_firewall.IptablesFirewallDriver |
+| securitygroup              | enable_security_group       | True                                                         |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+Compute Identical
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linuxbridge_agent: Section | Key                         | Value                                                        |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linux_bridge               | physical_interface_mappings | public:enp3s0                                                |
+| vxlan                      | l2_population               | True                                                         |
+| vxlan                      | local_ip                    | 172.22.10.99                                                 |
+| vxlan                      | enable_vxlan                | True                                                         |
+| agent                      | prevent_arp_spoofing        | True                                                         |
+| securitygroup              | firewall_driver             | neutron.agent.linux.iptables_firewall.IptablesFirewallDriver |
+| securitygroup              | enable_security_group       | True                                                         |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+
+Controller
++-----------------------+------------------------------------+-------------------------------------------------+
+| neutron: Section      | Key                                | Value                                           |
++-----------------------+------------------------------------+-------------------------------------------------+
+| database              | connection                         | mysql://neutron:sleestack191@controller/neutron |
+| DEFAULT               | verbose                            | True                                            |
+| DEFAULT               | nova_url                           | http://controller:8774/v2                       |
+| DEFAULT               | notify_nova_on_port_data_changes   | True                                            |
+| DEFAULT               | notify_nova_on_port_status_changes | True                                            |
+| DEFAULT               | auth_strategy                      | keystone                                        |
+| DEFAULT               | rpc_backend                        | rabbit                                          |
+| DEFAULT               | allow_overlapping_ips              | True                                            |
+| DEFAULT               | service_plugins                    | router                                          |
+| DEFAULT               | core_plugin                        | ml2                                             |
+| oslo_messaging_rabbit | rabbit_password                    | open.g00dke232                                  |
+| oslo_messaging_rabbit | rabbit_userid                      | openstack                                       |
+| oslo_messaging_rabbit | rabbit_host                        | controller                                      |
+| keystone_authtoken    | password                           | mk4968small23buggidntpass                       |
+| keystone_authtoken    | username                           | neutron                                         |
+| keystone_authtoken    | project_name                       | service                                         |
+| keystone_authtoken    | user_domain_id                     | default                                         |
+| keystone_authtoken    | project_domain_id                  | default                                         |
+| keystone_authtoken    | auth_plugin                        | password                                        |
+| keystone_authtoken    | auth_url                           | http://controller:35357                         |
+| keystone_authtoken    | auth_uri                           | http://controller:5000                          |
+| nova                  | password                           | mk4968small23buggidntpass                       |
+| nova                  | username                           | nova                                            |
+| nova                  | project_name                       | service                                         |
+| nova                  | region_name                        | RegionOne                                       |
+| nova                  | user_domain_id                     | default                                         |
+| nova                  | project_domain_id                  | default                                         |
+| nova                  | auth_plugin                        | password                                        |
+| nova                  | auth_url                           | http://controller:35357                         |
+| oslo_concurrency      | lock_path                          | /var/lib/neutron/tmp                            |
++-----------------------+------------------------------------+-------------------------------------------------+
+
+
+Compute 
++-----------------------+------------------------------------+-------------------------------------------------+
+| neutron: Section      | Key                                | Value                                           |
++-----------------------+------------------------------------+-------------------------------------------------+
+| database              | connection                         | mysql://neutron:sleestack191@controller/neutron |
+| DEFAULT               | verbose                            | True                                            |
+| DEFAULT               | nova_url                           | http://controller:8774/v2                       |
+| DEFAULT               | notify_nova_on_port_data_changes   | True                                            |
+| DEFAULT               | notify_nova_on_port_status_changes | True                                            |
+| DEFAULT               | auth_strategy                      | keystone                                        |
+| DEFAULT               | rpc_backend                        | rabbit                                          |
+| DEFAULT               | allow_overlapping_ips              | True                                            |
+| DEFAULT               | service_plugins                    | router                                          |
+| DEFAULT               | core_plugin                        | ml2                                             |
+| oslo_messaging_rabbit | rabbit_password                    | open.g00dke232                                  |
+| oslo_messaging_rabbit | rabbit_userid                      | openstack                                       |
+| oslo_messaging_rabbit | rabbit_host                        | controller                                      |
+| keystone_authtoken    | password                           | mk4968small23buggidntpass                       |
+| keystone_authtoken    | username                           | neutron                                         |
+| keystone_authtoken    | project_name                       | service                                         |
+| keystone_authtoken    | user_domain_id                     | default                                         |
+| keystone_authtoken    | project_domain_id                  | default                                         |
+| keystone_authtoken    | auth_plugin                        | password                                        |
+| keystone_authtoken    | auth_url                           | http://controller:35357                         |
+| keystone_authtoken    | auth_uri                           | http://controller:5000                          |
+| nova                  | password                           | mk4968small23buggidntpass                       |
+| nova                  | username                           | nova                                            |
+| nova                  | project_name                       | service                                         |
+| nova                  | region_name                        | RegionOne                                       |
+| nova                  | user_domain_id                     | default                                         |
+| nova                  | project_domain_id                  | default                                         |
+| nova                  | auth_plugin                        | password                                        |
+| nova                  | auth_url                           | http://controller:35357                         |
+| oslo_concurrency      | lock_path                          | /var/lib/neutron/tmp                            |
++-----------------------+------------------------------------+-------------------------------------------------+
+
+
+
+
+

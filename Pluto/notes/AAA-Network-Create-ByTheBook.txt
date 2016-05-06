@@ -1,0 +1,455 @@
+===========================================
+Create virtual networks
+http://docs.openstack.org/liberty/install-guide-rdo/launch-instance.html#create-virtual-networks
+
+
+neutron net-create public --shared --provider:physical_network public \
+  --provider:network_type flat
+
++---------------------------+--------------------------------------+
+| Field                     | Value                                |
++---------------------------+--------------------------------------+
+| admin_state_up            | True                                 |
+| id                        | 693f196d-a451-49b4-9517-d023d444c49d |
+| mtu                       | 0                                    |
+| name                      | public                               |
+| port_security_enabled     | True                                 |
+| provider:network_type     | flat                                 |
+| provider:physical_network | public                               |
+| provider:segmentation_id  |                                      |
+| router:external           | False                                |
+| shared                    | True                                 |
+| status                    | ACTIVE                               |
+| subnets                   |                                      |
+| tenant_id                 | fdf3f98a9b0c4e9e94603d8a84ea41a8     |
++---------------------------+--------------------------------------+
+
+The --shared option allows all projects to use the virtual network.
+
+The --provider:physical_network public and --provider:network_type 
+flat options connect the flat virtual network to the flat (native/untagged) 
+public physical network on the eth1 interface on the host using information 
+from the following files:
+
+ml2_conf.ini:
+
+[ml2_type_flat]
+flat_networks = public
+[root@maersk src]# ./pluto.py show -p /etc ml2_conf.ini  
++-------------------+----------------------+--------------------------+
+| ml2_conf: Section | Key                  | Value                    |
++-------------------+----------------------+--------------------------+
+| ml2               | extension_drivers    | port_security            |
+| ml2               | mechanism_drivers    | linuxbridge,l2population |
+| ml2               | tenant_network_types | vxlan                    |
+| ml2               | type_drivers         | flat,vlan,vxlan          |
+| ml2_type_flat     | flat_networks        | public                   |
+| ml2_type_vxlan    | vni_ranges           | 1:1000                   |
+| securitygroup     | enable_ipset         | True                     |
++-------------------+----------------------+--------------------------+
+
+linuxbridge_agent.ini:
+[linux_bridge]
+physical_interface_mappings = public:eth1  (public:enp3s0 in my case)
+[root@maersk src]# ./pluto.py show -p /etc linuxbridge_agent.ini
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linuxbridge_agent: Section | Key                         | Value                                                        |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linux_bridge               | physical_interface_mappings | public:enp3s0                                                |
+| vxlan                      | l2_population               | True                                                         |
+| vxlan                      | local_ip                    | 172.22.10.99                                                 |
+| vxlan                      | enable_vxlan                | True                                                         |
+| agent                      | prevent_arp_spoofing        | True                                                         |
+| securitygroup              | firewall_driver             | neutron.agent.linux.iptables_firewall.IptablesFirewallDriver |
+| securitygroup              | enable_security_group       | True                                                         |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+
+
+neutron subnet-create public PUBLIC_NETWORK_CIDR --name public \
+  --allocation-pool start=START_IP_ADDRESS,end=END_IP_ADDRESS\
+  --dns-nameserver DNS_RESOLVER --gateway PUBLIC_NETWORK_GATEWAY
+
+
+neutron subnet-create public 172.22.10.0/24 --name public \
+  --allocation-pool start=172.22.10.10,end=172.22.10.80\
+  --dns-nameserver 172.22.10.254 --gateway 172.22.10.254
+
+
+
+Created a new subnet:
++-------------------+--------------------------------------------------+
+| Field             | Value                                            |
++-------------------+--------------------------------------------------+
+| allocation_pools  | {"start": "172.22.10.10", "end": "172.22.10.80"} |
+| cidr              | 172.22.10.0/24                                   |
+| dns_nameservers   | 172.22.10.254                                    |
+| enable_dhcp       | True                                             |
+| gateway_ip        | 172.22.10.254                                    |
+| host_routes       |                                                  |
+| id                | c69b648c-3e02-41fc-877c-ed1d4727ad39             |
+| ip_version        | 4                                                |
+| ipv6_address_mode |                                                  |
+| ipv6_ra_mode      |                                                  |
+| name              | public                                           |
+| network_id        | 693f196d-a451-49b4-9517-d023d444c49d             |
+| subnetpool_id     |                                                  |
+| tenant_id         | fdf3f98a9b0c4e9e94603d8a84ea41a8                 |
++-------------------+--------------------------------------------------+
+
+=======================================
+Private project network¶
+http://docs.openstack.org/liberty/install-guide-rdo/launch-instance-networks-private.html
+
+
+If you chose networking option 2, you can also create a private project virtual 
+network that connects to the physical network infrastructure via layer-3 (routing) 
+and NAT. This network includes a DHCP server that provides IP addresses to instances. 
+An instance on this network can automatically access external networks such as the 
+Internet. However, access to an instance on this network from external networks such 
+as the Internet requires a floating IP address.
+
+source demo-openrc.sh
+neutron net-create private
+Created a new network:
++-----------------------+--------------------------------------+
+| Field                 | Value                                |
++-----------------------+--------------------------------------+
+| admin_state_up        | True                                 |
+| id                    | ff7d60d5-d22a-4ebe-94a3-61dd3db874a8 |
+| mtu                   | 0                                    |
+| name                  | private                              |
+| port_security_enabled | True                                 |
+| router:external       | False                                |
+| shared                | False                                |
+| status                | ACTIVE                               |
+| subnets               |                                      |
+| tenant_id             | 7813be77b1de4196b1c6b77006afa21c     |
++-----------------------+--------------------------------------+
+
+Non-privileged users typically cannot supply additional parameters 
+to this command. The service automatically chooses paramters using 
+information from the following files:
+
+ml2_conf.ini:
+
+[ml2]
+tenant_network_types = vxlan
+
+[ml2_type_vxlan]
+vni_ranges = 1:1000
+
+[root@maersk src]# ./pluto.py -p /etc show ml2_conf.ini
++-------------------+----------------------+--------------------------+
+| ml2_conf: Section | Key                  | Value                    |
++-------------------+----------------------+--------------------------+
+| ml2               | extension_drivers    | port_security            |
+| ml2               | mechanism_drivers    | linuxbridge,l2population |
+| ml2               | tenant_network_types | vxlan                    |
+| ml2               | type_drivers         | flat,vlan,vxlan          |
+| ml2_type_flat     | flat_networks        | public                   |
+| ml2_type_vxlan    | vni_ranges           | 1:1000                   |
+| securitygroup     | enable_ipset         | True                     |
++-------------------+----------------------+--------------------------+
+
+neutron subnet-create private 192.168.123.0/24 --name private \
+  --dns-nameserver 172.22.10.254 --gateway 192.168.123.1
+
+
+Created a new subnet:
++-------------------+------------------------------------------------------+
+| Field             | Value                                                |
++-------------------+------------------------------------------------------+
+| allocation_pools  | {"start": "192.168.123.2", "end": "192.168.123.254"} |
+| cidr              | 192.168.123.0/24                                     |
+| dns_nameservers   | 172.22.10.254                                        |
+| enable_dhcp       | True                                                 |
+| gateway_ip        | 192.168.123.1                                        |
+| host_routes       |                                                      |
+| id                | 30dc9b48-4ddf-4b01-803a-744fda4d9c7a                 |
+| ip_version        | 4                                                    |
+| ipv6_address_mode |                                                      |
+| ipv6_ra_mode      |                                                      |
+| name              | private                                              |
+| network_id        | ff7d60d5-d22a-4ebe-94a3-61dd3db874a8                 |
+| subnetpool_id     |                                                      |
+| tenant_id         | 7813be77b1de4196b1c6b77006afa21c                     |
++-------------------+------------------------------------------------------+
+
+=================
+Create a router
+
+
+[root@maersk src]# source admin-openrc.sh 
+[root@maersk src]# neutron net-update public --router:external
+Updated network: public
+[root@maersk src]# source demo-openrc.sh
+[root@maersk src]# neutron router-create router
+Created a new router:
++-----------------------+--------------------------------------+
+| Field                 | Value                                |
++-----------------------+--------------------------------------+
+| admin_state_up        | True                                 |
+| external_gateway_info |                                      |
+| id                    | 5939b796-cae6-4d72-8d34-66e20afb95aa |
+| name                  | router                               |
+| routes                |                                      |
+| status                | ACTIVE                               |
+| tenant_id             | 7813be77b1de4196b1c6b77006afa21c     |
++-----------------------+--------------------------------------+
+[root@maersk src]# neutron router-interface-add router private
+Added interface 4aa689e6-c065-4af3-8106-621fbdd8e63f to router router.
+[root@maersk src]# neutron router-gateway-set router public
+Set gateway for router router
+
+=============
+Verify Operation
+Does not Ping.
+
+[root@maersk src]# source admin-openrc.sh 
+[root@maersk src]# ip netns
+qrouter-0ef0c154-76f2-4fa1-b995-3c6327b18061 (id: 2)
+qdhcp-ff7d60d5-d22a-4ebe-94a3-61dd3db874a8 (id: 1)
+qdhcp-8e7f7f83-bb22-4929-964a-c38ea7ac963b (id: 0)
+[root@maersk src]# neutron router-port-list router
++--------------------------------------+------+-------------------+--------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                            |
++--------------------------------------+------+-------------------+--------------------------------------------------------------------------------------+
+| 23827de1-6141-4ac4-841c-70cf60c5ffd8 |      | fa:16:3e:ed:be:de | {"subnet_id": "411d8013-1d79-49fd-a507-eafe5ad3c14e", "ip_address": "172.22.10.11"}  |
+| 4aa689e6-c065-4af3-8106-621fbdd8e63f |      | fa:16:3e:ff:15:14 | {"subnet_id": "30dc9b48-4ddf-4b01-803a-744fda4d9c7a", "ip_address": "192.168.123.1"} |
++--------------------------------------+------+-------------------+--------------------------------------------------------------------------------------+
+[root@maersk src]# ping -c 4 172.22.10.11
+PING 172.22.10.11 (172.22.10.11) 56(84) bytes of data.
+From 172.22.10.99 icmp_seq=1 Destination Host Unreachable
+From 172.22.10.99 icmp_seq=2 Destination Host Unreachable
+From 172.22.10.99 icmp_seq=3 Destination Host Unreachable
+From 172.22.10.99 icmp_seq=4 Destination Host Unreachable
+
+
+=============================
+Launch an instance on the public network¶
+
+[root@maersk src]# neutron net-list  
++--------------------------------------+---------+-------------------------------------------------------+
+| id                                   | name    | subnets                                               |
++--------------------------------------+---------+-------------------------------------------------------+
+| 8e7f7f83-bb22-4929-964a-c38ea7ac963b | public  | 411d8013-1d79-49fd-a507-eafe5ad3c14e 172.22.10.0/24   |
+| ff7d60d5-d22a-4ebe-94a3-61dd3db874a8 | private | 30dc9b48-4ddf-4b01-803a-744fda4d9c7a 192.168.123.0/24 |
++--------------------------------------+---------+-------------------------------------------------------+
+[root@maersk src]# nova boot --flavor m1.tiny --image cirros --nic net-id=8e7f7f83-bb22-4929-964a-c38ea7ac963b \
+>   --security-group default --key-name mykey public-instance
++--------------------------------------+-----------------------------------------------+
+| Property                             | Value                                         |
++--------------------------------------+-----------------------------------------------+
+| OS-DCF:diskConfig                    | MANUAL                                        |
+| OS-EXT-AZ:availability_zone          |                                               |
+| OS-EXT-STS:power_state               | 0                                             |
+| OS-EXT-STS:task_state                | scheduling                                    |
+| OS-EXT-STS:vm_state                  | building                                      |
+| OS-SRV-USG:launched_at               | -                                             |
+| OS-SRV-USG:terminated_at             | -                                             |
+| accessIPv4                           |                                               |
+| accessIPv6                           |                                               |
+| adminPass                            | Nhpji6JU66fH                                  |
+| config_drive                         |                                               |
+| created                              | 2016-03-20T20:05:03Z                          |
+| flavor                               | m1.tiny (1)                                   |
+| hostId                               |                                               |
+| id                                   | 3fc73b6d-856b-4b61-8504-8ba46dfa812a          |
+| image                                | cirros (eba7c78e-d214-4164-ad94-5ad9ebceea7c) |
+| key_name                             | mykey                                         |
+| metadata                             | {}                                            |
+| name                                 | public-instance                               |
+| os-extended-volumes:volumes_attached | []                                            |
+| progress                             | 0                                             |
+| security_groups                      | default                                       |
+| status                               | BUILD                                         |
+| tenant_id                            | 7813be77b1de4196b1c6b77006afa21c              |
+| updated                              | 2016-03-20T20:05:03Z                          |
+| user_id                              | e8e70bfee9034cbe99d68ef5bbde540f              |
++--------------------------------------+-----------------------------------------------+
+
+[root@maersk src]# nova list  
++--------------------------------------+-----------------+--------+------------+-------------+---------------------+
+| ID                                   | Name            | Status | Task State | Power State | Networks            |
++--------------------------------------+-----------------+--------+------------+-------------+---------------------+
+| 3fc73b6d-856b-4b61-8504-8ba46dfa812a | public-instance | ACTIVE | -          | Running     | public=172.22.10.12 |
++--------------------------------------+-----------------+--------+------------+-------------+---------------------+
+
+
+public-instance pings google and can be accessed via ssh.
+
+
+==============
+Launch on Private Network
+
+[root@maersk src]# source demo-openrc.sh 
+
+
+[root@maersk src]# neutron net-list  
++--------------------------------------+---------+-------------------------------------------------------+
+| id                                   | name    | subnets                                               |
++--------------------------------------+---------+-------------------------------------------------------+
+| ff7d60d5-d22a-4ebe-94a3-61dd3db874a8 | private | 30dc9b48-4ddf-4b01-803a-744fda4d9c7a 192.168.123.0/24 |
+| 8e7f7f83-bb22-4929-964a-c38ea7ac963b | public  | 411d8013-1d79-49fd-a507-eafe5ad3c14e 172.22.10.0/24   |
++--------------------------------------+---------+-------------------------------------------------------+
+[root@maersk src]# nova boot --flavor m1.tiny --image cirros --nic net-id=ff7d60d5-d22a-4ebe-94a3-61dd3db874a8 \
+>   --security-group default --key-name mykey private-instance
++--------------------------------------+-----------------------------------------------+
+| Property                             | Value                                         |
++--------------------------------------+-----------------------------------------------+
+| OS-DCF:diskConfig                    | MANUAL                                        |
+| OS-EXT-AZ:availability_zone          |                                               |
+| OS-EXT-STS:power_state               | 0                                             |
+| OS-EXT-STS:task_state                | scheduling                                    |
+| OS-EXT-STS:vm_state                  | building                                      |
+| OS-SRV-USG:launched_at               | -                                             |
+| OS-SRV-USG:terminated_at             | -                                             |
+| accessIPv4                           |                                               |
+| accessIPv6                           |                                               |
+| adminPass                            | tLWy4VH8Xw73                                  |
+| config_drive                         |                                               |
+| created                              | 2016-03-20T20:21:59Z                          |
+| flavor                               | m1.tiny (1)                                   |
+| hostId                               |                                               |
+| id                                   | 582ea664-73e4-42c6-8a9d-59edf1867721          |
+| image                                | cirros (eba7c78e-d214-4164-ad94-5ad9ebceea7c) |
+| key_name                             | mykey                                         |
+| metadata                             | {}                                            |
+| name                                 | private-instance                              |
+| os-extended-volumes:volumes_attached | []                                            |
+| progress                             | 0                                             |
+| security_groups                      | default                                       |
+| status                               | BUILD                                         |
+| tenant_id                            | 7813be77b1de4196b1c6b77006afa21c              |
+| updated                              | 2016-03-20T20:21:59Z                          |
+| user_id                              | e8e70bfee9034cbe99d68ef5bbde540f              |
++--------------------------------------+-----------------------------------------------+
+[root@maersk src]# nova list  
++--------------------------------------+------------------+--------+------------+-------------+---------------------+
+| ID                                   | Name             | Status | Task State | Power State | Networks            |
++--------------------------------------+------------------+--------+------------+-------------+---------------------+
+| 582ea664-73e4-42c6-8a9d-59edf1867721 | private-instance | BUILD  | spawning   | NOSTATE     |                     |
+| 3fc73b6d-856b-4b61-8504-8ba46dfa812a | public-instance  | ACTIVE | -          | Running     | public=172.22.10.12 |
++--------------------------------------+------------------+--------+------------+-------------+---------------------+
+[root@maersk src]# nova list  
++--------------------------------------+------------------+--------+------------+-------------+-----------------------+
+| ID                                   | Name             | Status | Task State | Power State | Networks              |
++--------------------------------------+------------------+--------+------------+-------------+-----------------------+
+| 582ea664-73e4-42c6-8a9d-59edf1867721 | private-instance | ACTIVE | -          | Running     | private=192.168.123.3 |
+| 3fc73b6d-856b-4b61-8504-8ba46dfa812a | public-instance  | ACTIVE | -          | Running     | public=172.22.10.12   |
++--------------------------------------+------------------+--------+------------+-------------+-----------------------+
+
+
+  
+---------------------------------------------
+Access Private Instance
+
+[root@maersk src]# nova get-vnc-console private-instance novnc
++-------+---------------------------------------------------------------------------------+
+| Type  | Url                                                                             |
++-------+---------------------------------------------------------------------------------+
+| novnc | http://maersk:6080/vnc_auto.html?token=a732d6ba-d432-4712-9ffe-2613e8957a22 |
++-------+---------------------------------------------------------------------------------+
+
+Can't ping google.
+Can ping 192.168.123.1
+Can't ping the top part of the Router.
+[root@maersk src]# ping 172.22.10.11  
+PING 172.22.10.11 (172.22.10.11) 56(84) bytes of data.
+From 172.22.10.99 icmp_seq=1 Destination Host Unreachable
+From 172.22.10.99 icmp_seq=2 Destination Host Unreachable
+From 172.22.10.99 icmp_seq=3 Destination Host Unreachable
+From 172.22.10.99 icmp_seq=4 Destination Host Unreachable
+Looking via Admin, we see the Top prt of the Router is still DOWN.
+[root@maersk src]# neutron port-show 23827de1-6141-4ac4-841c-70cf60c5ffd8
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                        |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | True                                                                                                         |
+| allowed_address_pairs |                                                                                                              |
+| binding:host_id       | maersk                                                                                                       |
+| binding:profile       | {}                                                                                                           |
+| binding:vif_details   | {"port_filter": true}                                                                                        |
+| binding:vif_type      | bridge                                                                                                       |
+| binding:vnic_type     | normal                                                                                                       |
+| device_id             | 0ef0c154-76f2-4fa1-b995-3c6327b18061                                                                         |
+| device_owner          | network:router_gateway                                                                                       |
+| dns_assignment        | {"hostname": "host-172-22-10-11", "ip_address": "172.22.10.11", "fqdn": "host-172-22-10-11.openstacklocal."} |
+| dns_name              |                                                                                                              |
+| extra_dhcp_opts       |                                                                                                              |
+| fixed_ips             | {"subnet_id": "411d8013-1d79-49fd-a507-eafe5ad3c14e", "ip_address": "172.22.10.11"}                          |
+| id                    | 23827de1-6141-4ac4-841c-70cf60c5ffd8                                                                         |
+| mac_address           | fa:16:3e:ed:be:de                                                                                            |
+| name                  |                                                                                                              |
+| network_id            | 8e7f7f83-bb22-4929-964a-c38ea7ac963b                                                                         |
+| port_security_enabled | False                                                                                                        |
+| security_groups       |                                                                                                              |
+| status                | DOWN                                                                                                         |
+| tenant_id             |                                                                                                              |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+
+
+
+[root@maersk src]# neutron router-show router  
++-----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                                                                                                    |
++-----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | True                                                                                                                                                                                     |
+| external_gateway_info | {"network_id": "8e7f7f83-bb22-4929-964a-c38ea7ac963b", "enable_snat": true, "external_fixed_ips": [{"subnet_id": "411d8013-1d79-49fd-a507-eafe5ad3c14e", "ip_address": "172.22.10.11"}]} |
+| id                    | 0ef0c154-76f2-4fa1-b995-3c6327b18061                                                                                                                                                     |
+| name                  | router                                                                                                                                                                                   |
+| routes                |                                                                                                                                                                                          |
+| status                | ACTIVE                                                                                                                                                                                   |
+| tenant_id             | 7813be77b1de4196b1c6b77006afa21c                                                                                                                                                         |
++-----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+[root@maersk src]# neutron port-list  
++--------------------------------------+------+-------------------+--------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                            |
++--------------------------------------+------+-------------------+--------------------------------------------------------------------------------------+
+| 099b78b0-0cb7-4b68-be18-76bdb1208c2b |      | fa:16:3e:cb:8e:79 | {"subnet_id": "30dc9b48-4ddf-4b01-803a-744fda4d9c7a", "ip_address": "192.168.123.2"} |
+| 23827de1-6141-4ac4-841c-70cf60c5ffd8 |      | fa:16:3e:ed:be:de | {"subnet_id": "411d8013-1d79-49fd-a507-eafe5ad3c14e", "ip_address": "172.22.10.11"}  |
+| 3e3c98ac-3a91-43ec-9ccd-d6e46750a637 |      | fa:16:3e:f7:c3:f2 | {"subnet_id": "411d8013-1d79-49fd-a507-eafe5ad3c14e", "ip_address": "172.22.10.12"}  |
+| 4aa689e6-c065-4af3-8106-621fbdd8e63f |      | fa:16:3e:ff:15:14 | {"subnet_id": "30dc9b48-4ddf-4b01-803a-744fda4d9c7a", "ip_address": "192.168.123.1"} |
+| c42ed954-4de7-4dc4-b9eb-ea185fc2d839 |      | fa:16:3e:cf:bc:f8 | {"subnet_id": "411d8013-1d79-49fd-a507-eafe5ad3c14e", "ip_address": "172.22.10.10"}  |
+| e90702a2-013e-4977-a724-757f60d51190 |      | fa:16:3e:c8:28:ce | {"subnet_id": "30dc9b48-4ddf-4b01-803a-744fda4d9c7a", "ip_address": "192.168.123.3"} |
++--------------------------------------+------+-------------------+--------------------------------------------------------------------------------------+
+
+[root@maersk src]# neutron port-show   4aa689e6-c065-4af3-8106-621fbdd8e63f
++-----------------------+-----------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                           |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | True                                                                                                            |
+| allowed_address_pairs |                                                                                                                 |
+| binding:vnic_type     | normal                                                                                                          |
+| device_id             | 0ef0c154-76f2-4fa1-b995-3c6327b18061                                                                            |
+| device_owner          | network:router_interface                                                                                        |
+| dns_assignment        | {"hostname": "host-192-168-123-1", "ip_address": "192.168.123.1", "fqdn": "host-192-168-123-1.openstacklocal."} |
+| dns_name              |                                                                                                                 |
+| extra_dhcp_opts       |                                                                                                                 |
+| fixed_ips             | {"subnet_id": "30dc9b48-4ddf-4b01-803a-744fda4d9c7a", "ip_address": "192.168.123.1"}                            |
+| id                    | 4aa689e6-c065-4af3-8106-621fbdd8e63f                                                                            |
+| mac_address           | fa:16:3e:ff:15:14                                                                                               |
+| name                  |                                                                                                                 |
+| network_id            | ff7d60d5-d22a-4ebe-94a3-61dd3db874a8                                                                            |
+| port_security_enabled | False                                                                                                           |
+| security_groups       |                                                                                                                 |
+| status                | ACTIVE                                                                                                          |
+| tenant_id             | 7813be77b1de4196b1c6b77006afa21c                                                                                |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,86 @@
+
+
+http://egonzalez.org/delete-openstack-neutron-networks-solution-to-unable-to-complete-operation-on-subnet/
+
+
+
+[root@maersk src]# source admin-openrc.sh 
+[root@maersk src]# 
+[root@maersk src]# neutron router-list
++--------------------------------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------+-------+
+| id                                   | name   | external_gateway_info                                                                                                                                                                    | distributed | ha    |
++--------------------------------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------+-------+
+| 52ca91cb-df23-4593-bb95-ea9f1fc33e99 | router | {"network_id": "be6e920a-51aa-4293-bb95-7ac38aab9df6", "enable_snat": true, "external_fixed_ips": [{"subnet_id": "f227734a-eca3-4472-81f6-620e1bf1fac9", "ip_address": "172.22.10.11"}]} | False       | False |
++--------------------------------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------+-------+
+[root@maersk src]# neutron router-gateway-clear 52ca91cb-df23-4593-bb95-ea9f1fc33e99
+Removed gateway from router 52ca91cb-df23-4593-bb95-ea9f1fc33e99
+[root@maersk src]# neutron router-port-list 52ca91cb-df23-4593-bb95-ea9f1fc33e99  
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                           |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| 5b25c4df-0c83-4ef2-bed6-6e854cf66af6 |      | fa:16:3e:d5:62:14 | {"subnet_id": "eb5550e2-4de5-4ca5-9d7e-9d6ffe86ce92", "ip_address": "192.168.10.1"} |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+[root@maersk src]# neutron router-interface-delete  52ca91cb-df23-4593-bb95-ea9f1fc33e99 5b25c4df-0c83-4ef2-bed6-6e854cf66af6  
+Unable to find subnet with name '5b25c4df-0c83-4ef2-bed6-6e854cf66af6'
+[root@maersk src]# neutron router-subnet-list 52ca91cb-df23-4593-bb95-ea9f1fc33e99  
+Unknown command [u'router-subnet-list', u'52ca91cb-df23-4593-bb95-ea9f1fc33e99']
+[root@maersk src]# neutron router-interface-delete  52ca91cb-df23-4593-bb95-ea9f1fc33e99 eb5550e2-4de5-4ca5-9d7e-9d6ffe86ce92
+Removed interface from router 52ca91cb-df23-4593-bb95-ea9f1fc33e99.
+[root@maersk src]# neutron router-delete 52ca91cb-df23-4593-bb95-ea9f1fc33e99  
+Deleted router: 52ca91cb-df23-4593-bb95-ea9f1fc33e99
+[root@maersk src]# neutron subnet-list
++--------------------------------------+---------+-----------------+----------------------------------------------------+
+| id                                   | name    | cidr            | allocation_pools                                   |
++--------------------------------------+---------+-----------------+----------------------------------------------------+
+| f227734a-eca3-4472-81f6-620e1bf1fac9 | public  | 172.22.10.0/24  | {"start": "172.22.10.10", "end": "172.22.10.40"}   |
+| eb5550e2-4de5-4ca5-9d7e-9d6ffe86ce92 | private | 192.168.10.0/24 | {"start": "192.168.10.2", "end": "192.168.10.254"} |
++--------------------------------------+---------+-----------------+----------------------------------------------------+
+[root@maersk src]# neutron subnet-delete f227734a-eca3-4472-81f6-620e1bf1fac9  
+Unable to complete operation on subnet f227734a-eca3-4472-81f6-620e1bf1fac9. One or more ports have an IP allocation from this subnet.
+[root@maersk src]# neutron port-list  
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                           |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| 22307900-d514-4dc1-9134-1a0ff5056fed |      | fa:16:3e:18:2d:c6 | {"subnet_id": "f227734a-eca3-4472-81f6-620e1bf1fac9", "ip_address": "172.22.10.12"} |
+| 6b44eb6d-5731-4111-8692-d65fe41bd599 |      | fa:16:3e:28:b3:10 | {"subnet_id": "eb5550e2-4de5-4ca5-9d7e-9d6ffe86ce92", "ip_address": "192.168.10.2"} |
+| a0ecf115-5d5e-45c8-9287-4676a04e9593 |      | fa:16:3e:0a:30:e1 | {"subnet_id": "f227734a-eca3-4472-81f6-620e1bf1fac9", "ip_address": "172.22.10.13"} |
+| f82ad7e7-37df-4855-b170-960cb72fb8cb |      | fa:16:3e:19:77:ca | {"subnet_id": "f227734a-eca3-4472-81f6-620e1bf1fac9", "ip_address": "172.22.10.10"} |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+[root@maersk src]# neutron port-delete  22307900-d514-4dc1-9134-1a0ff5056fed 
+Port 22307900-d514-4dc1-9134-1a0ff5056fed cannot be deleted directly via the port API: has device owner network:floatingip
+[root@maersk src]# neutron floatingip-list
++--------------------------------------+------------------+---------------------+---------+
+| id                                   | fixed_ip_address | floating_ip_address | port_id |
++--------------------------------------+------------------+---------------------+---------+
+| 1f697917-c6da-4bdb-bc98-c8e94f3effb5 |                  | 172.22.10.12        |         |
+| 447faa9a-25d0-4559-93f2-5499c8def51e |                  | 172.22.10.13        |         |
+| a0b8a122-ee01-40cd-91e6-473cacad1793 |                  | 172.22.10.10        |         |
++--------------------------------------+------------------+---------------------+---------+
+[root@maersk src]# neutron floatingip-delete 1f697917-c6da-4bdb-bc98-c8e94f3effb5  
+Deleted floatingip: 1f697917-c6da-4bdb-bc98-c8e94f3effb5
+[root@maersk src]# neutron floatingip-delete 447faa9a-25d0-4559-93f2-5499c8def51e  
+Deleted floatingip: 447faa9a-25d0-4559-93f2-5499c8def51e
+[root@maersk src]# neutron floatingip-delete a0b8a122-ee01-40cd-91e6-473cacad1793  
+Deleted floatingip: a0b8a122-ee01-40cd-91e6-473cacad1793
+[root@maersk src]# neutron port-list
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                           |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| 6b44eb6d-5731-4111-8692-d65fe41bd599 |      | fa:16:3e:28:b3:10 | {"subnet_id": "eb5550e2-4de5-4ca5-9d7e-9d6ffe86ce92", "ip_address": "192.168.10.2"} |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+[root@maersk src]# neutron port-delete  6b44eb6d-5731-4111-8692-d65fe41bd599  
+Deleted port: 6b44eb6d-5731-4111-8692-d65fe41bd599
+[root@maersk src]# neutron net-list
++--------------------------------------+---------+------------------------------------------------------+
+| id                                   | name    | subnets                                              |
++--------------------------------------+---------+------------------------------------------------------+
+| be6e920a-51aa-4293-bb95-7ac38aab9df6 | public  | f227734a-eca3-4472-81f6-620e1bf1fac9 172.22.10.0/24  |
+| 28ca326a-8443-4c1c-b288-48920a1eefbe | private | eb5550e2-4de5-4ca5-9d7e-9d6ffe86ce92 192.168.10.0/24 |
++--------------------------------------+---------+------------------------------------------------------+
+[root@maersk src]# neutron net-delete be6e920a-51aa-4293-bb95-7ac38aab9df6  
+Deleted network: be6e920a-51aa-4293-bb95-7ac38aab9df6
+[root@maersk src]# neutron net-delete 28ca326a-8443-4c1c-b288-48920a1eefbe  
+Deleted network: 28ca326a-8443-4c1c-b288-48920a1eefbe
+[root@maersk src]# 
+
+

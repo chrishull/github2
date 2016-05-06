@@ -1,0 +1,8 @@
+
+Fixing DNS.
+
+
+Issue 2:
+Must add DNS servers to dhcp_thing.ini.
+
+

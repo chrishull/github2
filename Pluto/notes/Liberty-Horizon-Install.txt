@@ -1,0 +1,149 @@
+http://docs.openstack.org/liberty/install-guide-rdo/horizon.html
+
+
+yum install openstack-dashboard -y
+
+=====
+Manually edit the following.....
+
+
+Edit the /etc/openstack-dashboard/local_settings file and complete the following actions:
+
+vi /etc/openstack-dashboard/local_settings
+
+
+# Configure the dashboard to use OpenStack services on the controller node:
+
+OPENSTACK_HOST = "controller"
+
+# Allow all hosts to access the dashboard:
+
+ALLOWED_HOSTS = ['*', ]
+
+# Configure the memcached session storage service:
+
+CACHES = {
+    'default': {
+         'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+         'LOCATION': '127.0.0.1:11211',
+    }
+}
+
+# Note
+# Comment out any other session storage configuration.
+
+# Configure user as the default role for users that you create via the dashboard:
+
+OPENSTACK_KEYSTONE_DEFAULT_ROLE = "user"
+
+# Enable the multi-domain model:
+
+OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT = True
+
+# Configure the service API version so that you can log into the dashboard by the Keystone V3 API:
+
+OPENSTACK_API_VERSIONS = {
+    "identity": 3,
+    "volume": 2,
+}
+
+# If you chose networking option 1, disable support for layer-3 networking services:
+# I chose Option 2, so leave it alone.
+# (...) Leave other nv pairs intact.
+OPENSTACK_NEUTRON_NETWORK = {
+    'enable_router': False,
+    'enable_quotas': False,
+    'enable_distributed_router': False,
+    'enable_ha_router': False,
+    'enable_lb': False,
+    'enable_firewall': False,
+    'enable_vpn': False,
+    'enable_fip_topology_check': False,
+}
+
+
+
+
+====
+This is a merge of the instructions and what's already there
+====
+
+OPENSTACK_NEUTRON_NETWORK = {
+    # XXX Original settings
+    # 'enable_router': True,
+    # 'enable_quotas': True,
+    # 'enable_ipv6': True,
+    # 'enable_distributed_router': False,
+    # 'enable_ha_router': False,
+    # 'enable_lb': True,
+    # 'enable_firewall': True,
+    # 'enable_vpn': True,
+    # 'enable_fip_topology_check': True,
+    
+    'enable_router': False,
+    'enable_quotas': False,
+    'enable_ipv6': True,
+    'enable_distributed_router': False,
+    'enable_ha_router': False,
+    'enable_lb': False,
+    'enable_firewall': False,
+    'enable_vpn': False,
+    'enable_fip_topology_check': False,
+
+	# LEAVE THE REST ALONE
+}
+
+
+
+# Optionally, configure the time zone:   America/Los_Angeles
+
+# TIME_ZONE = "America/Los_Angeles"
+
+# Replace TIME_ZONE with an appropriate time zone identifier. For more information, 
+# see the list of time zones.
+
+        
+====
+Finalize
+====
+
+systemctl enable httpd.service memcached.service
+systemctl restart httpd.service memcached.service
+
+
+====
+OPEN THE FIREWALL
+====
+
+[root@maersk sleestack]# firewall-cmd --get-active-zones
+public
+  interfaces: enp3s0
+[root@maersk sleestack]# 
+
+firewall-cmd --zone=public --add-port=80/tcp --permanent
+firewall-cmd --zone=public --add-port=8080/tcp --permanent  ???
+VNC
+firewall-cmd --zone=public --add-port=6080/tcp --permanent
+
+firewall-cmd --reload
+
+====
+Verify
+====
+
+http://controller/dashboard
+
+http://maersk/dashboard
+
+http://172.22.10.99/dashboard
+
+
+
+
+
+
+        
+        
+        
+
+        

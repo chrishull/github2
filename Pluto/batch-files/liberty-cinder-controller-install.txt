@@ -1,0 +1,108 @@
+# Liberty Cinder Controller install
+# Does a full configuration for the Controller Node for block storage.
+#
+# see Cinder Controller Install
+# http://docs.openstack.org/liberty/install-guide-rdo/cinder-controller-install.html
+# 
+
+
+&INSTALL_NOTE Liberty Cider Controller install
+# &CONF_FILE_NAME to set the conf file being changed.
+# &ECHO to send messages.
+
+&ECHO FOLLOW POST CONFIG INSTRUCTIONS to insure conf files are correct.
+
+#=======================================================================
+# Edit the /etc/cinder/cinder.conf file and complete the following actions:
+&CONF_FILE_NAME cinder.conf
+
+# In the [database] section, configure database access:
+
+[database]
+...
+connection = mysql://cinder:CINDER_DBPASS@controller/cinder
+
+# Replace CINDER_DBPASS with the password you chose for the Block Storage database.
+
+# In the [DEFAULT] and [oslo_messaging_rabbit] sections, configure RabbitMQ message queue access:
+
+[DEFAULT]
+...
+rpc_backend = rabbit
+
+[oslo_messaging_rabbit]
+...
+rabbit_host = controller
+rabbit_userid = openstack
+rabbit_password = RABBIT_PASS
+
+# Replace RABBIT_PASS with the password you chose for the openstack account in RabbitMQ.
+
+# In the [DEFAULT] and [keystone_authtoken] sections, configure Identity service access:
+
+[DEFAULT]
+...
+auth_strategy = keystone
+
+[keystone_authtoken]
+...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = cinder
+password = CINDER_PASS
+
+# Replace CINDER_PASS with the password you chose for the cinder user in the Identity service.
+
+# Note
+
+# Comment out or remove any other options in the [keystone_authtoken] section.
+&ECHO Make sure the [keystone_authtoken] section contains only the following.
+&ECHO auth_uri = http://controller:5000
+&ECHO auth_url = http://controller:35357
+&ECHO auth_plugin = password
+&ECHO project_domain_id = default
+&ECHO user_domain_id = default
+&ECHO project_name = service
+&ECHO username = cinder
+&ECHO password = CINDER_PASS (identity service password)
+
+
+# In the [DEFAULT] section, configure the my_ip option to use the management interface IP address of the controller node:
+
+[DEFAULT]
+...
+my_ip = CONTROLLER_IP
+# See variables.py
+
+# In the [oslo_concurrency] section, configure the lock path:
+
+[oslo_concurrency]
+...
+lock_path = /var/lib/cinder/tmp
+
+# (Optional) To assist with troubleshooting, enable verbose logging in the [DEFAULT] section:
+
+[DEFAULT]
+...
+verbose = True
+
+
+# Configure Compute to use Block Storage
+
+# Edit the /etc/nova/nova.conf file and add the following to it:
+&CONF_FILE_NAME nova.conf
+
+[cinder]
+os_region_name = RegionOne
+
+
+
+
+
+
+
+

@@ -1,0 +1,167 @@
+Now trying to create a network that represents my 5 static IPs.
+
+
+
+
+
+75.25.159.248/29               block
+
+75.25.159.249,75.25.159.253    pool
+
+75.25.159.254                  gateway
+
+68.94.156.1
+68.94.157.1
+
+Create a Subnet consisting of the pool if Internet IPs and use them as Floating IPs
+   
+https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux_OpenStack_Platform/4/html/Getting_Started_Guide/Defining_a_Floating_IP-Address_Pool.html
+
+and
+
+http://docs.openstack.org/user-guide/cli_manage_ip_addresses.html
+
+
+
+source admin-openrc.sh
+
+neutron subnet-create --name internet --allocation-pool start=75.25.159.249,end=75.25.159.253 \
+  --gateway 75.25.159.254 --disable-dhcp public 75.25.159.248/29
+
+[root@maersk src]# neutron subnet-create --name internet --allocation-pool start=75.25.159.249,end=75.25.159.253 \
+>   --gateway 75.25.159.254 --disable-dhcp public 75.25.159.248/29
+Created a new subnet:
++-------------------+----------------------------------------------------+
+| Field             | Value                                              |
++-------------------+----------------------------------------------------+
+| allocation_pools  | {"start": "75.25.159.249", "end": "75.25.159.253"} |
+| cidr              | 75.25.159.248/29                                   |
+| dns_nameservers   |                                                    |
+| enable_dhcp       | False                                              |
+| gateway_ip        | 75.25.159.254                                      |
+| host_routes       |                                                    |
+| id                | 9cae35a2-a289-4a0a-9b67-0741b66881eb               |
+| ip_version        | 4                                                  |
+| ipv6_address_mode |                                                    |
+| ipv6_ra_mode      |                                                    |
+| name              | internet                                           |
+| network_id        | be6e920a-51aa-4293-bb95-7ac38aab9df6               |
+| subnetpool_id     |                                                    |
+| tenant_id         | fdf3f98a9b0c4e9e94603d8a84ea41a8                   |
++-------------------+----------------------------------------------------+
+
+So this is interesting.   It just seems to grab them from the last subnet that
+was created.   Then it moves on to the public subnet.   Ok.
+So I made a few internet IPs and a few public net IPs.
+
+[root@maersk src]# neutron floatingip-create public  
+Created a new floatingip:
++---------------------+--------------------------------------+
+| Field               | Value                                |
++---------------------+--------------------------------------+
+| fixed_ip_address    |                                      |
+| floating_ip_address | 75.25.159.249                        |
+| floating_network_id | be6e920a-51aa-4293-bb95-7ac38aab9df6 |
+| id                  | d2bd9fe0-6d1e-4a6c-8a0f-7e24e7f1c1f0 |
+| port_id             |                                      |
+| router_id           |                                      |
+| status              | DOWN                                 |
+| tenant_id           | fdf3f98a9b0c4e9e94603d8a84ea41a8     |
++---------------------+--------------------------------------+
+... keep going til...
+[root@maersk src]# neutron floatingip-create public  
+Created a new floatingip:
++---------------------+--------------------------------------+
+| Field               | Value                                |
++---------------------+--------------------------------------+
+| fixed_ip_address    |                                      |
+| floating_ip_address | 75.25.159.253                        |
+| floating_network_id | be6e920a-51aa-4293-bb95-7ac38aab9df6 |
+| id                  | 20c12357-6c3d-41a8-a9c4-020d9363781d |
+| port_id             |                                      |
+| router_id           |                                      |
+| status              | DOWN                                 |
+| tenant_id           | fdf3f98a9b0c4e9e94603d8a84ea41a8     |
++---------------------+--------------------------------------+
+and then a few of these...
+[root@maersk src]# neutron floatingip-create public  
+Created a new floatingip:
++---------------------+--------------------------------------+
+| Field               | Value                                |
++---------------------+--------------------------------------+
+| fixed_ip_address    |                                      |
+| floating_ip_address | 172.22.10.39                         |
+| floating_network_id | be6e920a-51aa-4293-bb95-7ac38aab9df6 |
+| id                  | b6112822-54da-41e8-80df-7cfc574699f1 |
+| port_id             |                                      |
+| router_id           |                                      |
+| status              | DOWN                                 |
+| tenant_id           | fdf3f98a9b0c4e9e94603d8a84ea41a8     |
++---------------------+--------------------------------------+
+
+
+[root@maersk src]# nova floating-ip-list
++--------------------------------------+---------------+-----------+----------+--------+
+| Id                                   | IP            | Server Id | Fixed IP | Pool   |
++--------------------------------------+---------------+-----------+----------+--------+
+| 0718cded-bbca-4896-abcb-79015677147a | 172.22.10.40  | -         | -        | public |
+| 1e50911d-8d18-4ac7-985a-ff4d7f0e29ec | 75.25.159.252 | -         | -        | public |
+| 20c12357-6c3d-41a8-a9c4-020d9363781d | 75.25.159.253 | -         | -        | public |
+| 23df706a-dffd-4d02-a2c9-06ec0f63927e | 172.22.10.36  | -         | -        | public |
+| 2879696c-dce3-4acf-9efa-21eba6da6308 | 172.22.10.37  | -         | -        | public |
+| 3364a160-14d1-434b-88d7-ac897903832a | 75.25.159.251 | -         | -        | public |
+| 5515b5f7-1df3-4888-b43c-dd772cd0dc34 | 172.22.10.38  | -         | -        | public |
+| b6112822-54da-41e8-80df-7cfc574699f1 | 172.22.10.39  | -         | -        | public |
+| d2bd9fe0-6d1e-4a6c-8a0f-7e24e7f1c1f0 | 75.25.159.249 | -         | -        | public |
+| efe709f3-8940-424a-8256-2e97e445f4c8 | 75.25.159.250 | -         | -        | public |
++--------------------------------------+---------------+-----------+----------+--------+
+
+
+==================
+
+ 
+ 
+Create a Floating IP Pool
+
+
+neutron subnet-create ext-net --allocation-pool \
+  start=FLOATING_IP_START,end=FLOATING_IP_END \
+  --gateway=EXTERNAL_INTERFACE_GATEWAY --enable_dhcp=False EXTERNAL_INTERFACE_CIDR
+
+neutron subnet-create public --name internet-f --allocation-pool \
+  start=75.25.159.249,end=75.25.159.253 \
+  --gateway=75.25.159.254 --enable_dhcp=False 75.25.159.248/29
+  
+source the tenant and then do
+[root@maersk src]# neutron floatingip-create public
+Created a new floatingip:
++---------------------+--------------------------------------+
+| Field               | Value                                |
++---------------------+--------------------------------------+
+| fixed_ip_address    |                                      |
+| floating_ip_address | 172.22.10.12                         |
+| floating_network_id | be6e920a-51aa-4293-bb95-7ac38aab9df6 |
+| id                  | 1f697917-c6da-4bdb-bc98-c8e94f3effb5 |
+| port_id             |                                      |
+| router_id           |                                      |
+| status              | DOWN                                 |
+| tenant_id           | 7813be77b1de4196b1c6b77006afa21c     |
++---------------------+--------------------------------------+
+[root@maersk src]# neutron floatingip-list
++--------------------------------------+------------------+---------------------+---------+
+| id                                   | fixed_ip_address | floating_ip_address | port_id |
++--------------------------------------+------------------+---------------------+---------+
+| 1f697917-c6da-4bdb-bc98-c8e94f3effb5 |                  | 172.22.10.12        |         |
++--------------------------------------+------------------+---------------------+---------+
+[root@maersk src]# source admin-openrc.sh 
+[root@maersk src]# neutron floatingip-list
++--------------------------------------+------------------+---------------------+---------+
+| id                                   | fixed_ip_address | floating_ip_address | port_id |
++--------------------------------------+------------------+---------------------+---------+
+| 1f697917-c6da-4bdb-bc98-c8e94f3effb5 |                  | 172.22.10.12        |         |
+| a0b8a122-ee01-40cd-91e6-473cacad1793 |                  | 172.22.10.10        |         |
++--------------------------------------+------------------+---------------------+---------+
+
+
+
+

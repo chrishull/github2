@@ -1,0 +1,366 @@
+Virgin.  No nets created via OpenStack yet.
+
+[root@maersk src]# ifconfig
+enp3s0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.22.10.99  netmask 255.255.255.0  broadcast 172.22.10.255
+        inet6 2602:306:31fd:1020:ae9e:17ff:feec:5d95  prefixlen 64  scopeid 0x0<global>
+        inet6 fe80::ae9e:17ff:feec:5d95  prefixlen 64  scopeid 0x20<link>
+        ether ac:9e:17:ec:5d:95  txqueuelen 1000  (Ethernet)
+        RX packets 238  bytes 16020 (15.6 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 60  bytes 6650 (6.4 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 0  (Local Loopback)
+        RX packets 4985  bytes 1060267 (1.0 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 4985  bytes 1060267 (1.0 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+virbr0: flags=4099<UP,BROADCAST,MULTICAST>  mtu 1500
+        inet 192.168.122.1  netmask 255.255.255.0  broadcast 192.168.122.255
+        ether 52:54:00:33:94:b3  txqueuelen 0  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+        
+        
+        
+Looks the same until I crate Privae network and Subnet
+
+[root@maersk src]# ifconfig  
+brq573956a6-13: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1450
+        inet6 fe80::6469:36ff:fecc:a4d8  prefixlen 64  scopeid 0x20<link>
+        ether da:88:38:4a:06:e1  txqueuelen 0  (Ethernet)
+        RX packets 4  bytes 264 (264.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 7  bytes 578 (578.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+enp3s0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.22.10.99  netmask 255.255.255.0  broadcast 172.22.10.255
+        inet6 2602:306:31fd:1020:ae9e:17ff:feec:5d95  prefixlen 64  scopeid 0x0<global>
+        inet6 fe80::ae9e:17ff:feec:5d95  prefixlen 64  scopeid 0x20<link>
+        ether ac:9e:17:ec:5d:95  txqueuelen 1000  (Ethernet)
+        RX packets 5310  bytes 393373 (384.1 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 2661  bytes 3165497 (3.0 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 0  (Local Loopback)
+        RX packets 50779  bytes 13259383 (12.6 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 50779  bytes 13259383 (12.6 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+tapbb0ceef0-e6: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1450
+        inet6 fe80::e816:29ff:fec8:9925  prefixlen 64  scopeid 0x20<link>
+        ether ea:16:29:c8:99:25  txqueuelen 1000  (Ethernet)
+        RX packets 7  bytes 578 (578.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 13  bytes 1066 (1.0 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+virbr0: flags=4099<UP,BROADCAST,MULTICAST>  mtu 1500
+        inet 192.168.122.1  netmask 255.255.255.0  broadcast 192.168.122.255
+        ether 52:54:00:33:94:b3  txqueuelen 0  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+vxlan-92: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1450
+        inet6 fe80::d888:38ff:fe4a:6e1  prefixlen 64  scopeid 0x20<link>
+        ether da:88:38:4a:06:e1  txqueuelen 0  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 16 overruns 0  carrier 0  collisions 0
+
+
+==============================================
+
+ Hi Christopher,
+
+Routers work under Liberty and LinuxBridge just fine, in my experience, 
+so don’t be too quick to give up on them. I promise you’ll have a tougher 
+go at it, at this point, using another virtual machine as a router.
+
+Some tips:
+
+    Use the ‘ip’ command rather than ‘ifconfig’. Output of ‘ip addr’ would 
+    be more helpful here.
+    Use ‘brctl show’ to see the virtual bridges and their members. That output 
+    would be helpful here as well. 
+
+
+You have an IP configured on interface enp3s0, and I can’t tell what you have 
+set as the physical interface mappings in the ML2/LinuxBridge agent config. 
+On older email I see this:
+
+>> physical_interface_mappings | public:enp3s0 
+
+If that’s still the case, you’re going to have a hard time. The LinuxBridge 
+agent expects to put the enp3s0 interface into the respective brq-* bridge 
+that corresponds to the public (flat) network. Once the interface is in the 
+bridge, you may lose connectivity to/from any address on that interface. At 
+that point, your host will be unable to communicate with the router's gateway 
+interface also in the bridge, and probably any external host. In this 
+configuration, you may consider moving the IP from enp3s0 to the brq-* 
+bridge temporarily. That should work. Give it a try and let me know.
+
+James
+
+========================
+
+ Hi Chris,
+
+I saw that too from the previous email, and I guess it’s possible the IP was moved 
+to the bridge automatically. I just haven’t observed that behavior in this case since 
+we don’t IP those interfaces.
+
+Given that the IP has been moved to the bridge, double check that you are able to ping 
+the gateway of the 172.22.10.x/24 network from the host (if a gateway exists). That 
+appeared to be 172.22.10.254 from previous emails. That will verify that connectivity 
+from the bridge through enp0s3 is good. 
+
+[sleestack@maersk ~]$ ping 172.22.10.254
+PING 172.22.10.254 (172.22.10.254) 56(84) bytes of data.
+64 bytes from 172.22.10.254: icmp_seq=1 ttl=255 time=1.09 ms
+...
+
+
+The current bridges correspond to the public and private networks you setup:
+
+[root@maersk src]# brctl show
+bridge name           bridge id        STP enabled     interfaces
+brq573956a6-13        8000.72650bf7669c    no        tap74c0d2df-39 <- qr-* (inside) router port
+ ^^^ PRIVATE                                         tapbb0ceef0-e6
+                                                     vxlan-92
+brq9ee73442-5a        8000.4a157ef499cf    no        enp3s0
+ ^^^ PUBLIC                                          tap788bdea8-02
+                                                     tapb8f78b33-19
+                                                     tapbc53b8c7-6a
+                                                     tapd669011b-bf
+virbr0        8000.5254003394b3            yes       virbr0-nic
+  ^^^ Ignore this one
+
+Your router ports are:
+
+[root@maersk src]# neutron router-port-list router
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                           |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| 21c8decf-e4c8-4467-9266-ca5cfb9c7c20 |      | fa:16:3e:d6:29:b4 | {"subnet_id": "28683bfe-2410-4f9b-b805-ec3c7aee009a", "ip_address": "172.22.10.10"} |
+| 74c0d2df-3944-43d7-8be9-2ef0d9242edc |      | fa:16:3e:7b:d6:0f | {"subnet_id": "83f4f5e5-13b6-41f2-af07-b96d86847e2b", "ip_address": "192.168.10.1"} |
++--------------------------------------+------+-------------------+——————————————————————————————————————————+
+
+The private port begins with 74c0d2df-39 while the public port begins with 21c8decf-e4. T
+he private port should be in the private bridge, which it is. The public port should be 
+in the public bridge, and it is not. Normally, that port would be added by Neutron, so 
+the fact that its missing is an issue.
+
+If you can, please send the output of the following command, where <routerid> equals the 
+actual router ID:
+
+Ip netns exec qrouter-<routerid> ip addr
+
+[root@maersk src]# ip netns exec qrouter-a1be1dbd-1a94-4a8c-8093-45a7af89140c ip addr  
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: qr-74c0d2df-39@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether fa:16:3e:7b:d6:0f brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.10.1/24 brd 192.168.10.255 scope global qr-74c0d2df-39
+       valid_lft forever preferred_lft forever
+    inet6 fe80::f816:3eff:fe7b:d60f/64 scope link 
+       valid_lft forever preferred_lft forever
+       
+
+You can also try to perform the following:
+
+neutron router-gateway-clear <routerid>
+neutron router-gateway-set <routerid> public
+
+Great Idea!....
+
+Tried.  No change.    Great way to diagnoze thngs though.  Thnnks.
+[root@maersk src]# brctl show
+bridge name	bridge id		STP enabled	interfaces
+brq573956a6-13		8000.72650bf7669c	no		tap74c0d2df-39
+							tapbb0ceef0-e6
+							vxlan-92
+brq9ee73442-5a		8000.4a157ef499cf	no		enp3s0
+							tap788bdea8-02
+							tapb8f78b33-19
+							tapbc53b8c7-6a
+							tapd669011b-bf
+virbr0		8000.5254003394b3	yes		virbr0-nic
+[root@maersk src]# neutron router-port-list router
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                           |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| 32c71a70-7b97-49d2-a2c1-fa3aee864783 |      | fa:16:3e:12:53:b6 | {"subnet_id": "28683bfe-2410-4f9b-b805-ec3c7aee009a", "ip_address": "172.22.10.16"} |
+| 74c0d2df-3944-43d7-8be9-2ef0d9242edc |      | fa:16:3e:7b:d6:0f | {"subnet_id": "83f4f5e5-13b6-41f2-af07-b96d86847e2b", "ip_address": "192.168.10.1"} |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+[root@maersk src]# ping 172.22.10.16
+PING 172.22.10.16 (172.22.10.16) 56(84) bytes of data.
+^C
+--- 172.22.10.16 ping statistics ---
+3 packets transmitted, 0 received, 100% packet loss, time 1999ms
+
+
+That may be enough to trigger recreating the interface and connecting it to the bridge. 
+Posting the L3 agent/L2 agent log on pastebin/gist if you still have issues could be helpful.
+
+James
+
+==========
+Ohhhh........  I wonder what this is?   Doesn't match port?  
+What is qrouter-a1be1dbd-1a94-4a8c-8093-45a7af89140c?  hmmm
+
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.router_info RuntimeError: 
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.router_info Command: ['ip', 'netns', 'add', u'qrouter-a1be1dbd-1a94-4a8c-8093-45a7af89140c']
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.router_info Exit code: 1
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.router_info Stdin: 
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.router_info Stdout: 
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.router_info Stderr: Cannot create namespace file "/var/run/netns/qrouter-a1be1dbd-1a94-4a8c-8093-45a7af89140c": File exists
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.router_info 
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.router_info 
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.agent [-] Failed to process compatible router 'a1be1dbd-1a94-4a8c-8093-45a7af89140c'
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.agent Traceback (most recent call last):
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.agent RuntimeError: 
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.agent Command: ['ip', 'netns', 'add', u'qrouter-a1be1dbd-1a94-4a8c-8093-45a7af89140c']
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.agent Exit code: 1
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.agent Stdin: 
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.agent Stdout: 
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.agent Stderr: Cannot create namespace file "/var/run/netns/qrouter-a1be1dbd-1a94-4a8c-8093-45a7af89140c": File exists
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.agent 
+2016-03-25 11:50:24.903 1734 ERROR neutron.agent.l3.agent 
+
+
+=====
+Delete router.  Re-add   Still get.
+
+2016-03-25 12:36:07.416 1734 ERROR neutron.agent.l3.agent Stderr: Cannot create namespace file "/var/run/netns/qrouter-6b171a53-cade-45f6-ad42-e612dc93e010": File exists
+2016-03-25 12:36:07.416 1734 ERROR neutron.agent.l3.agent 
+2016-03-25 12:36:07.416 1734 ERROR neutron.agent.l3.agent 
+[root@maersk src]# date
+Fri Mar 25 12:36:25 EDT 2016
+
+
+=======================================================
+
+
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent [-] Failed to process compatible router '6b171a53-cade-45f6-ad42-e612dc93e010'
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent Traceback (most recent call last):
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/l3/agent.py", line 500, in _process_router_update
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     self._process_router_if_compatible(router)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/l3/agent.py", line 443, in _process_router_if_compatible
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     self._process_updated_router(router)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/l3/agent.py", line 457, in _process_updated_router
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     ri.process(self)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/common/utils.py", line 359, in call
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     self.logger(e)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/oslo_utils/excutils.py", line 195, in __exit__
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     six.reraise(self.type_, self.value, self.tb)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/common/utils.py", line 356, in call
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     return func(*args, **kwargs)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/l3/router_info.py", line 693, in process
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     self.process_external(agent)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/l3/router_info.py", line 659, in process_external
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     self._process_external_gateway(ex_gw_port, agent.pd)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/l3/router_info.py", line 568, in _process_external_gateway
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     self.external_gateway_added(ex_gw_port, interface_name)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/l3/router_info.py", line 533, in external_gateway_added
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     ex_gw_port, interface_name, self.ns_name, preserve_ips)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/l3/router_info.py", line 495, in _external_gateway_added
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     self._plug_external_gateway(ex_gw_port, interface_name, ns_name)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/l3/router_info.py", line 476, in _plug_external_gateway
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     prefix=EXTERNAL_DEV_PREFIX)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/linux/interface.py", line 252, in plug
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     bridge, namespace, prefix)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/linux/interface.py", line 483, in plug_new
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     namespace2=namespace)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/linux/ip_lib.py", line 144, in add_veth
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     self.ensure_namespace(namespace2)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/linux/ip_lib.py", line 163, in ensure_namespace
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     ip = self.netns.add(name)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/linux/ip_lib.py", line 793, in add
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     self._as_root([], ('add', name), use_root_namespace=True)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/linux/ip_lib.py", line 280, in _as_root
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     use_root_namespace=use_root_namespace)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/linux/ip_lib.py", line 80, in _as_root
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     log_fail_as_error=self.log_fail_as_error)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/linux/ip_lib.py", line 89, in _execute
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     log_fail_as_error=log_fail_as_error)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent   File "/usr/lib/python2.7/site-packages/neutron/agent/linux/utils.py", line 159, in execute
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent     raise RuntimeError(m)
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent RuntimeError: 
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent Command: ['ip', 'netns', 'add', u'qrouter-6b171a53-cade-45f6-ad42-e612dc93e010']
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent Exit code: 1
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent Stdin: 
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent Stdout: 
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent Stderr: Cannot create namespace file "/var/run/netns/qrouter-6b171a53-cade-45f6-ad42-e612dc93e010": File exists
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent 
+2016-03-25 22:34:24.968 1734 ERROR neutron.agent.l3.agent 
+
+
+
+BUG found in CentOS
+https://bugs.launchpad.net/ubuntu/+source/neutron/+bug/1497309
+
+This issue was fixed in the openstack/neutron 7.0.2 release.
+hertzyang (hertz-7) wrote on 2016-03-04: 	#11
+
+how to get neutron 7.0.2 , thanks.
+
+[root@maersk qr]# neutron --version  
+3.1.0
+WOW  OLD
+
+
+yum update openstack-neutron openstack-neutron-ml2 \
+  openstack-neutron-linuxbridge python-neutronclient ebtables ipset
+  
+-------------------------------------------
+CentOS out of Date
+
+Kris...
+   Looks like they are taking care of it:
+
+
+[11:12]
+number80
+klindgren: it's in liberty-testing => http://cbs.centos.org/koji/buildinfo?buildID=10149
+
+[11:14] number80
+I tagged it into -release since nobody reported issue for two weeks should be good
+____________________________________________________
+
+Saved all /etc/neutron  
+Downloaded all noarch RPMs
+yum update *.rpm
+Updated:
+  openstack-neutron.noarch 1:7.0.3-1.el7                 openstack-neutron-common.noarch 1:7.0.3-1.el7             openstack-neutron-linuxbridge.noarch 1:7.0.3-1.el7            
+  openstack-neutron-ml2.noarch 1:7.0.3-1.el7             python-neutron.noarch 1:7.0.3-1.el7                      
+
+Complete!
+
+[root@maersk neutron-upgrade]# neutron --version  
+3.1.0
+hmmm.
+
+
+
+  

@@ -1,0 +1,114 @@
+# Pluto - Openstack Configuration Manager
+# Batch file for Openstack Liberty Nova installation
+# See
+# http://docs.openstack.org/liberty/install-guide-rdo/nova-controller-install.html
+
+&INSTALL_NOTE Liberty Nova Controller service initial install
+
+
+# ====================================================================================
+# Start of instructions from Openstack Install Guide
+# Make sure ADMIN_TOKEN and KEYSTONE_DBPASS are defined in variables.py
+
+
+# Edit the /etc/nova/nova.conf file and complete the following actions:
+&CONF_FILE_NAME nova.conf
+
+# In the [database] section, configure database access:
+
+[database]
+...
+connection = mysql://nova:NOVA_DBPASS@controller/nova
+
+# In the [DEFAULT] and [oslo_messaging_rabbit] sections, configure RabbitMQ message queue access:
+
+[DEFAULT]
+...
+rpc_backend = rabbit
+
+[oslo_messaging_rabbit]
+...
+rabbit_host = controller
+rabbit_userid = openstack
+rabbit_password = RABBIT_PASS
+
+# In the [DEFAULT] and [keystone_authtoken] sections, configure Identity service access:
+
+[DEFAULT]
+...
+auth_strategy = keystone
+
+[keystone_authtoken]
+...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = nova
+password = NOVA_PASS
+
+
+# In the [DEFAULT] section, configure the my_ip option to use the management interface IP address of the controller node:
+
+[DEFAULT]
+...
+my_ip = CONTROLLER_IP
+# Set this in variables.py
+
+
+# In the [DEFAULT] section, enable support for the Networking service:
+
+[DEFAULT]
+...
+network_api_class = nova.network.neutronv2.api.API
+security_group_api = neutron
+linuxnet_interface_driver = nova.network.linux_net.NeutronLinuxBridgeInterfaceDriver
+firewall_driver = nova.virt.firewall.NoopFirewallDriver
+
+# By default, Compute uses an internal firewall service. Since Networking includes a 
+# firewall service, you must disable the Compute firewall service by using the 
+# nova.virt.firewall.NoopFirewallDriver firewall driver.
+
+
+
+# In the [vnc] section, configure the VNC proxy to use the management interface IP address of the controller node:
+
+[vnc]
+...
+vncserver_listen = $my_ip
+vncserver_proxyclient_address = $my_ip
+
+# In the [glance] section, configure the location of the Image service:
+
+[glance]
+...
+host = controller
+
+
+# In the [oslo_concurrency] section, configure the lock path:
+
+[oslo_concurrency]
+
+lock_path = /var/lib/nova/tmp
+
+# In the [DEFAULT] section, disable the EC2 API:
+
+[DEFAULT]
+...
+enabled_apis=osapi_compute,metadata
+
+# (Optional) To assist with troubleshooting, enable verbose logging in the [DEFAULT] section:
+
+[DEFAULT]
+...
+verbose = True
+
+
+
+
+
+
+
+

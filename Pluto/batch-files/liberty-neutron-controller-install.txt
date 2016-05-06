@@ -1,0 +1,129 @@
+# Pluto - Openstack Configuration Manager
+# Batch file for Openstack Liberty Neutron installation
+#
+# Network Configuration Option 2 as seen here. 
+# http://docs.openstack.org/liberty/install-guide-rdo/neutron-controller-install-option2.html
+
+&INSTALL_NOTE Liberty Neutron service controller initial install
+
+
+# ====================================================================================
+# Start of instructions from Openstack Install Guide
+# Make sure all needed variables such as NOVAS_PASS are defined in variables.py
+
+
+# Edit the /etc/neutron/neutron.conf file and complete the following actions:
+&CONF_FILE_NAME neutron.conf
+
+# In the [database] section, configure database access:
+
+[database]
+...
+connection = mysql://neutron:NEUTRON_DBPASS@controller/neutron
+
+
+# In the [DEFAULT] section, enable the Modular Layer 2 (ML2) plug-in, router service, and overlapping IP addresses:
+
+[DEFAULT]
+...
+core_plugin = ml2
+service_plugins = router
+allow_overlapping_ips = True
+
+# In the [DEFAULT] and [oslo_messaging_rabbit] sections, configure RabbitMQ message queue access:
+
+[DEFAULT]
+...
+rpc_backend = rabbit
+
+[oslo_messaging_rabbit]
+...
+rabbit_host = controller
+rabbit_userid = openstack
+rabbit_password = RABBIT_PASS
+
+# In the [DEFAULT] and [keystone_authtoken] sections, configure Identity service access:
+
+[DEFAULT]
+...
+auth_strategy = keystone
+
+[keystone_authtoken]
+...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = neutron
+password = NEUTRON_PASS
+
+# Note
+# Comment out or remove any other options in the [keystone_authtoken] section.
+
+# In the [DEFAULT] and [nova] sections, configure Networking to notify Compute of network topology changes:
+
+[DEFAULT]
+...
+notify_nova_on_port_status_changes = True
+notify_nova_on_port_data_changes = True
+nova_url = http://controller:8774/v2
+
+[nova]
+...
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+region_name = RegionOne
+project_name = service
+username = nova
+password = NOVA_PASS
+
+# In the [oslo_concurrency] section, configure the lock path:
+
+[oslo_concurrency]
+...
+lock_path = /var/lib/neutron/tmp
+
+# (Optional) To assist with troubleshooting, enable verbose logging in the [DEFAULT] section:
+
+[DEFAULT]
+...
+verbose = True
+
+
+# OOPS   NEED TO HANDLE INI FILES AS WELL.
+# ------------------------------------------------------------------------------------
+# Configure the Modular Layer 2 (ML2) plug-in
+
+# The ML2 plug-in uses the Linux bridge mechanism to build layer-2 (bridging and switching) virtual 
+# networking infrastructure for instances.
+
+
+# ------------------------------------------------------------------------------------
+# Configure Compute to use Networking
+
+# Edit the /etc/nova/nova.conf file and perform the following actions:
+&CONF_FILE_NAME nova.conf
+
+# In the [neutron] section, configure access parameters, enable the metadata proxy, and configure the secret:
+
+[neutron]
+...
+url = http://controller:9696
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+region_name = RegionOne
+project_name = service
+username = neutron
+password = NEUTRON_PASS
+
+service_metadata_proxy = True
+metadata_proxy_shared_secret = METADATA_SECRET
+
+
+

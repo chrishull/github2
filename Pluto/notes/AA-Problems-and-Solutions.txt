@@ -1,0 +1,378 @@
+
+List of Problems and Solutions
+
+
+=====================================================================================
+Can't Create Floating IP on newly created PUBLIC net and subnet.
+
+[root@maersk src]# neutron floatingip-create public 
+Bad floatingip request: Network 0c5f555f-1bc7-4cd5-ad46-19ea46bbaccf is not a valid external network
+
+You need to connect a router between private and public.   FLoating IPs detect the presence or absence of a router.
+
+
+[root@maersk src]# source admin-openrc.sh 
+[root@maersk src]# neutron floatingip-create public 
+Bad floatingip request: Network 0c5f555f-1bc7-4cd5-ad46-19ea46bbaccf is not a valid external network
+[root@maersk src]# source admin-openrc.sh 
+[root@maersk src]# neutron net-update public --router:external
+Updated network: public
+[root@maersk src]# source demo-openrc.sh 
+[root@maersk src]# neutron router-create router
+Created a new router:
++-----------------------+--------------------------------------+
+| Field                 | Value                                |
++-----------------------+--------------------------------------+
+| admin_state_up        | True                                 |
+| external_gateway_info |                                      |
+| id                    | bba95913-aede-42f3-b98f-ee386efa17f2 |
+| name                  | router                               |
+| routes                |                                      |
+| status                | ACTIVE                               |
+| tenant_id             | 7813be77b1de4196b1c6b77006afa21c     |
++-----------------------+--------------------------------------+
+[root@maersk src]# neutron router-interface-add router private
+Added interface 2e2666c7-4fef-4bc0-8ea5-dc02831a9717 to router router.
+[root@maersk src]# neutron router-gateway-set router public
+Set gateway for router router
+[root@maersk src]# source admin-openrc.sh
+[root@maersk src]# ip netns
+qrouter-bba95913-aede-42f3-b98f-ee386efa17f2 (id: 2)
+qdhcp-9a69f8da-d18a-4d47-9b73-d661845e18cf (id: 1)
+qdhcp-0c5f555f-1bc7-4cd5-ad46-19ea46bbaccf (id: 0)
+[root@maersk src]# neutron router-port-list router
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                           |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| 2e2666c7-4fef-4bc0-8ea5-dc02831a9717 |      | fa:16:3e:b6:89:c0 | {"subnet_id": "6eb927e5-095f-4c8c-bd3c-c9999b959414", "ip_address": "192.168.10.1"} |
+| 6fbf6f78-3fa2-4da3-bc2b-1dab64d673d7 |      | fa:16:3e:17:df:45 | {"subnet_id": "aea716c1-e1e2-430b-85c0-5ec975e3a287", "ip_address": "172.22.10.12"} |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+[root@maersk src]# source demo-openrc.sh 
+[root@maersk src]# neutron floatingip-create public
+Created a new floatingip:
++---------------------+--------------------------------------+
+| Field               | Value                                |
++---------------------+--------------------------------------+
+| fixed_ip_address    |                                      |
+| floating_ip_address | 172.22.10.13                         |
+| floating_network_id | 0c5f555f-1bc7-4cd5-ad46-19ea46bbaccf |
+| id                  | 898a3257-a41a-48e5-8922-44939c049643 |
+| port_id             |                                      |
+| router_id           |                                      |
+| status              | DOWN                                 |
+| tenant_id           | 7813be77b1de4196b1c6b77006afa21c     |
++---------------------+--------------------------------------+
+
+
+======================================================================================================
+Can't Associate working Floating IP.  Can't ping   Can't ssh
+
+Unlike nova, You need to associate a floating IP with a PORT.  Not an Instance.
+
+source demo-openrs.sh
+neutron floatingip-list  
+ 1319  neutron port-list  
+ 1320  neutron  floatingip-associate 172.22.10.12 9b3d5e93-69ff-40c8-b3a9-d8bb6df81c19  
+ 1321  neutron  floatingip-associate 1f697917-c6da-4bdb-bc98-c8e94f3effb5   9b3d5e93-69ff-40c8-b3a9-d8bb6df81c19  
+ 
+ 
+Router won't ping
+Router is down.
+
+[root@maersk src]# neutron router-list  
++--------------------------------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| id                                   | name   | external_gateway_info                                                                                                                                                                    |
++--------------------------------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| bba95913-aede-42f3-b98f-ee386efa17f2 | router | 
+{"network_id": "0c5f555f-1bc7-4cd5-ad46-19ea46bbaccf", 
+"enable_snat": true, "external_fixed_ips": 
+[{"subnet_id": "aea716c1-e1e2-430b-85c0-5ec975e3a287", "ip_address": "172.22.10.12"}]} |
++--------------------------------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Can't Ping router from public  but CAN from private.   Router shows as DOWN, not ACTIVE.  Hmmm
+
+
+
+HMMM
+I had this issue when the netmask of the public subnet and gateway were mismatched. 
+Make sure the IP subnetting is done right, otherwise the port will stay down whatever you do.
+
+If you find the mistake, delete the network, subnet, router, ports, etc and create them again.
+---
+that's a good point - on the external quantum subnet, the gateway_ip has to be in the cidr range. 
+I wonder is there a reason why this is not enforced by the api.
+darragh-oreilly gravatar imagedarragh-oreilly (Sep 13 '13)
+
+Hi George, Can you elaborate more? I think we have same issue here, my host subnet mask is not 
+the same subnet mask used in the floating ips. Host Subnet Mask: /29 Floating IPs Subnet Mask: /27 
+So how am I going to used those different mask in my environment?
+
+
+SEE
+https://ask.openstack.org/en/question/80695/router-gateway-port-binding_fail-and-down/
+Add Router Gateway to public netowrk during creation???
+
+=====   HMMM   Disable DHCP on Public Net.    Router now has a Status of Active
+BUT can't be pinged.
+
+
+UNRESOLVED.   Using Public Net Only.
+
+
+========================================================================================
+Get a Server on the Internet using only the Public Network (no floaters)
+
+Add an internet subnet to public net.   
+Scenario 1:   Spin off floating IPs from that pool.  Associate with public subnet.
+Scenario 2:   Directly assign internet IPs   um  somehow.
+
+source admin
+
+neutron subnet-create --name internet --allocation-pool start=75.25.159.249,end=75.25.159.253 \
+  --gateway 75.25.159.254 --disable-dhcp public 75.25.159.248/29
+  
+  
+
+
+
+=====================================================================================
+How to Add Sec Group Rules to a Sec Group
+Can be done via GUI too.
+
+source admin-openrc.sh
+
+[root@maersk src]# nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
++-------------+-----------+---------+-----------+--------------+
+| IP Protocol | From Port | To Port | IP Range  | Source Group |
++-------------+-----------+---------+-----------+--------------+
+| icmp        | -1        | -1      | 0.0.0.0/0 |              |
++-------------+-----------+---------+-----------+--------------+
+[root@maersk src]# nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
++-------------+-----------+---------+-----------+--------------+
+| IP Protocol | From Port | To Port | IP Range  | Source Group |
++-------------+-----------+---------+-----------+--------------+
+| tcp         | 22        | 22      | 0.0.0.0/0 |              |
++-------------+-----------+---------+-----------+--------------+
+
+
+=======================================================================================
+How to Add Sec to the Damn Router
+
+We created a VM under Demo, which inherrited Demo's sec info.  The VM is pingable, etc.
+
+[sleestack@maersk src]$ neutron port-list  
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                           |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| 6451eda9-903d-4345-9939-8f3bbebecaec |      | fa:16:3e:0f:1d:31 | {"subnet_id": "fdf2bf4b-e0ef-4843-85a2-e88f9aa674b5", "ip_address": "172.22.10.10"} |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+[sleestack@maersk src]$ neutron port-show 6451eda9-903d-4345-9939-8f3bbebecaec
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                        |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | True                                                                                                         |
+| allowed_address_pairs |                                                                                                              |
+| binding:host_id       | maersk                                                                                                       |
+| binding:profile       | {}                                                                                                           |
+| binding:vif_details   | {"port_filter": true}                                                                                        |
+| binding:vif_type      | bridge                                                                                                       |
+| binding:vnic_type     | normal                                                                                                       |
+| device_id             | 8c8a6d27-51d1-4a5e-a9e0-9e2e1744ce4b                                                                         |
+| device_owner          | compute:nova                                                                                                 |
+| dns_assignment        | {"hostname": "host-172-22-10-10", "ip_address": "172.22.10.10", "fqdn": "host-172-22-10-10.openstacklocal."} |
+| dns_name              |                                                                                                              |
+| extra_dhcp_opts       |                                                                                                              |
+| fixed_ips             | {"subnet_id": "fdf2bf4b-e0ef-4843-85a2-e88f9aa674b5", "ip_address": "172.22.10.10"}                          |
+| id                    | 6451eda9-903d-4345-9939-8f3bbebecaec                                                                         |
+| mac_address           | fa:16:3e:0f:1d:31                                                                                            |
+| name                  |                                                                                                              |
+| network_id            | 43f09f04-c7ca-4df9-bc74-516dd134313f                                                                         |
+| port_security_enabled | True                                                                                                         |
+| security_groups       | a76c3568-7f0c-4e57-903b-669f6911eb0d                                                                         |
+| status                | ACTIVE                                                                                                       |
+| tenant_id             | 7813be77b1de4196b1c6b77006afa21c                                                                             |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+
+Note    security_groups a76c3568-7f0c-4e57-903b-669f6911eb0d  
+This turns out to be the default sec group for demo
+
+[sleestack@maersk src]$ source admin-openrc.sh 
+[sleestack@maersk src]$ nova secgroup-list
++--------------------------------------+---------+------------------------+
+| Id                                   | Name    | Description            |
++--------------------------------------+---------+------------------------+
+| d7272f73-f61b-4341-91a9-8e45f3bc9e7e | default | Default security group |
++--------------------------------------+---------+------------------------+
+[sleestack@maersk src]$ source demo-openrc.sh 
+[sleestack@maersk src]$ nova secgroup-list
++--------------------------------------+---------+------------------------+
+| Id                                   | Name    | Description            |
++--------------------------------------+---------+------------------------+
+| a76c3568-7f0c-4e57-903b-669f6911eb0d | default | Default security group |
++--------------------------------------+---------+------------------------+
+
+Now, let's create the Router.  Attach public and private nets.  And show it's public port.
+
+[sleestack@maersk src]$ neutron router-port-list router
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                           |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| 145e2d39-75ff-452d-b840-bb355528f865 |      | fa:16:3e:66:02:f2 | {"subnet_id": "9bc41a73-6863-476f-8b1a-5317dfc1fcdd", "ip_address": "192.168.10.1"} |
+| 688e344c-448a-4279-9e68-0653017c856f |      | fa:16:3e:1b:b2:75 | {"subnet_id": "fdf2bf4b-e0ef-4843-85a2-e88f9aa674b5", "ip_address": "172.22.10.11"} |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+[sleestack@maersk src]$ neutron port-show  688e344c-448a-4279-9e68-0653017c856f
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                        |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | True                                                                                                         |
+| allowed_address_pairs |                                                                                                              |
+| binding:host_id       | maersk                                                                                                       |
+| binding:profile       | {}                                                                                                           |
+| binding:vif_details   | {"port_filter": true}                                                                                        |
+| binding:vif_type      | bridge                                                                                                       |
+| binding:vnic_type     | normal                                                                                                       |
+| device_id             | c6d5a6a9-e0b6-419d-adf6-3647410550bf                                                                         |
+| device_owner          | network:router_gateway                                                                                       |
+| dns_assignment        | {"hostname": "host-172-22-10-11", "ip_address": "172.22.10.11", "fqdn": "host-172-22-10-11.openstacklocal."} |
+| dns_name              |                                                                                                              |
+| extra_dhcp_opts       |                                                                                                              |
+| fixed_ips             | {"subnet_id": "fdf2bf4b-e0ef-4843-85a2-e88f9aa674b5", "ip_address": "172.22.10.11"}                          |
+| id                    | 688e344c-448a-4279-9e68-0653017c856f                                                                         |
+| mac_address           | fa:16:3e:1b:b2:75                                                                                            |
+| name                  |                                                                                                              |
+| network_id            | 43f09f04-c7ca-4df9-bc74-516dd134313f                                                                         |
+| port_security_enabled | False                                                                                                        |
+| security_groups       |                                                                                                              |
+| status                | DOWN                                                                                                         |
+| tenant_id             |                                                                                                              |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+
+But the Private one works and it has no security either.  Hmmm
+
+[sleestack@maersk src]$ neutron port-show  145e2d39-75ff-452d-b840-bb355528f865
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                        |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | True                                                                                                         |
+| allowed_address_pairs |                                                                                                              |
+| binding:host_id       | maersk                                                                                                       |
+| binding:profile       | {}                                                                                                           |
+| binding:vif_details   | {"port_filter": true}                                                                                        |
+| binding:vif_type      | bridge                                                                                                       |
+| binding:vnic_type     | normal                                                                                                       |
+| device_id             | c6d5a6a9-e0b6-419d-adf6-3647410550bf                                                                         |
+| device_owner          | network:router_interface                                                                                     |
+| dns_assignment        | {"hostname": "host-192-168-10-1", "ip_address": "192.168.10.1", "fqdn": "host-192-168-10-1.openstacklocal."} |
+| dns_name              |                                                                                                              |
+| extra_dhcp_opts       |                                                                                                              |
+| fixed_ips             | {"subnet_id": "9bc41a73-6863-476f-8b1a-5317dfc1fcdd", "ip_address": "192.168.10.1"}                          |
+| id                    | 145e2d39-75ff-452d-b840-bb355528f865                                                                         |
+| mac_address           | fa:16:3e:66:02:f2                                                                                            |
+| name                  |                                                                                                              |
+| network_id            | f1309195-e346-4748-b223-d2875204cab8                                                                         |
+| port_security_enabled | False                                                                                                        |
+| security_groups       |                                                                                                              |
+| status                | ACTIVE                                                                                                       |
+| tenant_id             | 7813be77b1de4196b1c6b77006afa21c                                                                             |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+
+
+[sleestack@maersk src]$ neutron port-update --security-group a76c3568-7f0c-4e57-903b-669f6911eb0d \
+>     688e344c-448a-4279-9e68-0653017c856f
+Port security must be enabled and port must have an IP address in order to use security groups.
+
+
+
+neutron port-update --security-group a76c3568-7f0c-4e57-903b-669f6911eb0d \
+    688e344c-448a-4279-9e68-0653017c856f
+
+
+======================================================
+NETWORKING WRONG ASSUMPTION
+THE ROUTER IS NOT EMULATED, AS IS THE DHCP SERVER WHEN YOU MAKE A SUBNET.
+IT IS THE ATT ROUTER.   SO THE PUBLIC SUBNET MUST ENCOMPASS THE GATEWAY IP
+
+https://ask.openstack.org/en/question/3239/how-to-change-status-of-a-neutron-port-from-down-to-active/
+
+I had this issue when the netmask of the public subnet and gateway were mismatched. 
+Make sure the IP subnetting is done right, otherwise the port will stay down whatever 
+you do.
+
+If you find the mistake, delete the network, subnet, router, ports, etc and create 
+them again.
+
+
+===========================================================
+Making a Router Port active may be done by adding sec group from another active port on the Public net?
+
+[sleestack@maersk src]$ neutron port-update  23827de1-6141-4ac4-841c-70cf60c5ffd8  --port_security_enabled
+Updated port: 23827de1-6141-4ac4-841c-70cf60c5ffd8
+
+[sleestack@maersk src]$ neutron port-update  23827de1-6141-4ac4-841c-70cf60c5ffd8  --security-group  a76c3568-7f0c-4e57-903b-669f6911eb0d
+Updated port: 23827de1-6141-4ac4-841c-70cf60c5ffd8
+
+[sleestack@maersk src]$ neutron port-update  23827de1-6141-4ac4-841c-70cf60c5ffd8  --tenant_id 7813be77b1de4196b1c6b77006afa21c
+Cannot update read-only attribute tenant_id
+
+
+
+[sleestack@maersk src]$ neutron port-show 23827de1-6141-4ac4-841c-70cf60c5ffd8
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                        |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | True                                                                                                         |
+| allowed_address_pairs |                                                                                                              |
+| binding:host_id       | maersk                                                                                                       |
+| binding:profile       | {}                                                                                                           |
+| binding:vif_details   | {"port_filter": true}                                                                                        |
+| binding:vif_type      | bridge                                                                                                       |
+| binding:vnic_type     | normal                                                                                                       |
+| device_id             | 0ef0c154-76f2-4fa1-b995-3c6327b18061                                                                         |
+| device_owner          | network:router_gateway                                                                                       |
+| dns_assignment        | {"hostname": "host-172-22-10-11", "ip_address": "172.22.10.11", "fqdn": "host-172-22-10-11.openstacklocal."} |
+| dns_name              |                                                                                                              |
+| extra_dhcp_opts       |                                                                                                              |
+| fixed_ips             | {"subnet_id": "411d8013-1d79-49fd-a507-eafe5ad3c14e", "ip_address": "172.22.10.11"}                          |
+| id                    | 23827de1-6141-4ac4-841c-70cf60c5ffd8                                                                         |
+| mac_address           | fa:16:3e:ed:be:de                                                                                            |
+| name                  |                                                                                                              |
+| network_id            | 8e7f7f83-bb22-4929-964a-c38ea7ac963b                                                                         |
+| port_security_enabled | True                                                                                                         |
+| security_groups       | a76c3568-7f0c-4e57-903b-669f6911eb0d                                                                         |
+| status                | DOWN                                                                                                         |
+| tenant_id             |                                                                                                              |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+[sleestack@maersk src]$ ping 172.22.10.11
+PING 172.22.10.11 (172.22.10.11) 56(84) bytes of data.
+From 172.22.10.99 icmp_seq=1 Destination Host Unreachable
+
+
+
+Compare to a working port
+[sleestack@maersk src]$ neutron port-show 102c8891-9cdb-49d9-a349-93dca98fa6e1
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                        |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | True                                                                                                         |
+| allowed_address_pairs |                                                                                                              |
+| binding:host_id       | maersk                                                                                                       |
+| binding:profile       | {}                                                                                                           |
+| binding:vif_details   | {"port_filter": true}                                                                                        |
+| binding:vif_type      | bridge                                                                                                       |
+| binding:vnic_type     | normal                                                                                                       |
+| device_id             | e43b8c7a-480b-4104-a7eb-35744cb3ac04                                                                         |
+| device_owner          | compute:nova                                                                                                 |
+| dns_assignment        | {"hostname": "host-172-22-10-16", "ip_address": "172.22.10.16", "fqdn": "host-172-22-10-16.openstacklocal."} |
+| dns_name              |                                                                                                              |
+| extra_dhcp_opts       |                                                                                                              |
+| fixed_ips             | {"subnet_id": "411d8013-1d79-49fd-a507-eafe5ad3c14e", "ip_address": "172.22.10.16"}                          |
+| id                    | 102c8891-9cdb-49d9-a349-93dca98fa6e1                                                                         |
+| mac_address           | fa:16:3e:bd:7c:61                                                                                            |
+| name                  |                                                                                                              |
+| network_id            | 8e7f7f83-bb22-4929-964a-c38ea7ac963b                                                                         |
+| port_security_enabled | True                                                                                                         |
+| security_groups       | a76c3568-7f0c-4e57-903b-669f6911eb0d                                                                         |
+| status                | ACTIVE                                                                                                       |
+| tenant_id             | 7813be77b1de4196b1c6b77006afa21c                                                                             |
++-----------------------+--------------------------------------------------------------------------------------------------------------+
+

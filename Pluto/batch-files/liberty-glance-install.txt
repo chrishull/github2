@@ -1,0 +1,121 @@
+# Pluto - Openstack Configuration Manager
+# Batch file for Openstack Liberty Glance installation
+#
+# This batch file contains instructions for installing Liberty Glance as seen here.
+# http://docs.openstack.org/liberty/install-guide-rdo/glance-install.html
+# You can more or less cut and paste config file instructions from the above page.
+# See below.
+
+# Processor Directives
+#
+# There are a small number of processor directives in this file.  
+# They all begin with a "&"
+
+# Processor Directive  &INSTALL_NOTE
+# This processor will automatically add comments to .conf files.
+# This allows you to track changes and do some debugging if necessary.
+# This note simply marks the initial installation.
+&INSTALL_NOTE Liberty Glance service initial install
+
+# Processor Directive  &CONF_FILE_NAME
+# All subsequent modifications will take place for the conf file specified here.
+# No need for full path.  File searches are constrained by a root spec plus list
+# of known Openstack dirs ( /etc plus /nova, /glance, /neutron...)
+
+# Processor Directive  &ECHO
+# Prints the line to the screen.  Simple.  No variable resolution.
+
+# Variable Resolution
+#
+# Variables seen thruout the install guide, such as GLANCE_DBPASS are automatically resolved 
+# based on dictionary settings.
+# Find them in variables.py  OPENSTACK_VARIABLES and change them to your liking.
+# You can cut and paste settings right out of the Openstack install instructions.
+# We skip "..." and lines beginning with a '#' among others.
+
+# ====================================================================================
+# Start of instructions from Openstack Install Guide
+
+
+# Edit the /etc/glance/glance-api.conf file and complete the following actions:
+&CONF_FILE_NAME glance-api.conf
+
+# In the [database] section, configure database access:
+[database]
+...
+connection = mysql://glance:GLANCE_DBPASS@controller/glance
+
+# In the [keystone_authtoken] and [paste_deploy] sections, configure Identity service access:
+[keystone_authtoken]
+...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = glance
+password = GLANCE_PASS
+
+[paste_deploy]
+...
+flavor = keystone
+
+# In the [glance_store] section, configure the local file system store and location of image files:
+[glance_store]
+...
+default_store = file
+filesystem_store_datadir = /var/lib/glance/images/
+
+# In the [DEFAULT] section, configure the noop notification driver to disable 
+# notifications because they only pertain to the optional Telemetry service:
+[DEFAULT]
+...
+notification_driver = noop
+
+# (Optional) To assist with troubleshooting, enable verbose logging in the [DEFAULT] section:
+[DEFAULT]
+...
+verbose = True
+
+
+#--------------------------------------------------------------------------------------
+# Edit the /etc/glance/glance-registry.conf file and complete the following actions:
+&CONF_FILE_NAME glance-registry.conf
+
+# In the [database] section, configure database access:
+[database]
+...
+connection = mysql://glance:GLANCE_DBPASS@controller/glance
+
+# In the [keystone_authtoken] and [paste_deploy] sections, configure Identity service access:
+[keystone_authtoken]
+...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = glance
+password = GLANCE_PASS
+
+[paste_deploy]
+...
+flavor = keystone
+
+# In the [DEFAULT] section, configure the noop notification driver to disable 
+# notifications because they only pertain to the optional Telemetry service:
+
+[DEFAULT]
+...
+notification_driver = noop
+
+# (Optional) To assist with troubleshooting, enable verbose logging in the [DEFAULT] section:
+
+[DEFAULT]
+...
+verbose = True
+
+
+

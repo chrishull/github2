@@ -1,0 +1,11 @@
+
+
+http://www.techrepublic.com/blog/tr-dojo/virtualizing-a-physical-linux-machine/
+
+
+http://askubuntu.com/questions/34802/convert-my-physical-operating-system-to-a-virtualbox-disk
+
+Basically. boot a rescue disk and use dd to a dest drive with lost of space.
+
+
+

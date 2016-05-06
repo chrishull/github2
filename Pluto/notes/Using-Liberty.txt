@@ -1,0 +1,193 @@
+Using Liberty
+
+
+Block Storage - Creating Volumes for use by Instances
+
+http://docs.openstack.org/liberty/install-guide-rdo/launch-instance-cinder.html
+
+Let's Install CentOS!!!!  on a 100 GB drive
+
+source demo-openrc.sh
+
+cinder create --display-name CentOS-Volume 100
+
+[root@maersk src]# cinder create --display-name CentOS-Volume 100
++---------------------------------------+--------------------------------------+
+|                Property               |                Value                 |
++---------------------------------------+--------------------------------------+
+|              attachments              |                  []                  |
+|           availability_zone           |                 nova                 |
+|                bootable               |                false                 |
+|          consistencygroup_id          |                 None                 |
+|               created_at              |      2016-03-12T00:04:20.000000      |
+|              description              |                 None                 |
+|               encrypted               |                False                 |
+|                   id                  | 5ff732b2-772c-419e-9665-34fe859e421d |
+|                metadata               |                  {}                  |
+|              multiattach              |                False                 |
+|                  name                 |            CentOS-Volume             |
+|      os-vol-tenant-attr:tenant_id     |   7813be77b1de4196b1c6b77006afa21c   |
+|   os-volume-replication:driver_data   |                 None                 |
+| os-volume-replication:extended_status |                 None                 |
+|           replication_status          |               disabled               |
+|                  size                 |                 100                  |
+|              snapshot_id              |                 None                 |
+|              source_volid             |                 None                 |
+|                 status                |               creating               |
+|                user_id                |   e8e70bfee9034cbe99d68ef5bbde540f   |
+|              volume_type              |                 None                 |
++---------------------------------------+--------------------------------------+
+
+
+[root@maersk src]# cinder set-bootable CentOS-Volume true  
+[root@maersk src]# cinder list
++--------------------------------------+-----------+---------------+------+-------------+----------+-------------+-------------+
+|                  ID                  |   Status  |      Name     | Size | Volume Type | Bootable | Multiattach | Attached to |
++--------------------------------------+-----------+---------------+------+-------------+----------+-------------+-------------+
+| 5ff732b2-772c-419e-9665-34fe859e421d | available | CentOS-Volume | 100  |      -      |   true   |    False    |             |
++--------------------------------------+-----------+---------------+------+-------------+----------+-------------+-------------+
+
+
+
+[root@maersk src]# nova list
++--------------------------------------+----------------------+---------+------------+-------------+---------------------+
+| ID                                   | Name                 | Status  | Task State | Power State | Networks            |
++--------------------------------------+----------------------+---------+------------+-------------+---------------------+
+| 8f08cdfa-3dea-476b-91d4-d7a92ef122bd | CentOS-7-Demo-Server | ACTIVE  | -          | Running     | public=172.22.10.14 |
+| 560d0546-cb00-4f19-87f5-b5a77c96478e | public-instance      | SHUTOFF | -          | Shutdown    | public=172.22.10.12 |
++--------------------------------------+----------------------+---------+------------+-------------+---------------------+
+[root@maersk src]# cinder list
++--------------------------------------+-----------+---------------+------+-------------+----------+-------------+-------------+
+|                  ID                  |   Status  |      Name     | Size | Volume Type | Bootable | Multiattach | Attached to |
++--------------------------------------+-----------+---------------+------+-------------+----------+-------------+-------------+
+| 5ff732b2-772c-419e-9665-34fe859e421d | available | CentOS-Volume | 100  |      -      |   true   |    False    |             |
++--------------------------------------+-----------+---------------+------+-------------+----------+-------------+-------------+
+
+
+
+
+nova volume-attach CentOS-7-Demo-Server 5ff732b2-772c-419e-9665-34fe859e421d
+
+[root@maersk src]# nova volume-attach CentOS-7-Demo-Server 5ff732b2-772c-419e-9665-34fe859e421d
++----------+--------------------------------------+
+| Property | Value                                |
++----------+--------------------------------------+
+| device   | /dev/vdb                             |
+| id       | 5ff732b2-772c-419e-9665-34fe859e421d |
+| serverId | 8f08cdfa-3dea-476b-91d4-d7a92ef122bd |
+| volumeId | 5ff732b2-772c-419e-9665-34fe859e421d |
++----------+--------------------------------------+
+
+
+====================
+Volume to Image
+
+[root@maersk src]# source demo-openrc.sh 
+[root@maersk src]# cinder list
++--------------------------------------+-----------+---------------+------+-------------+----------+-------------+-------------+
+|                  ID                  |   Status  |      Name     | Size | Volume Type | Bootable | Multiattach | Attached to |
++--------------------------------------+-----------+---------------+------+-------------+----------+-------------+-------------+
+| 5ff732b2-772c-419e-9665-34fe859e421d | available | CentOS-Volume | 100  |      -      |   true   |    False    |             |
++--------------------------------------+-----------+---------------+------+-------------+----------+-------------+-------------+
+
+cinder upload-to-image --disk-format qcow2 --container-format bare <volume_id> <image_name>
+
+
+cinder upload-to-image --disk-format qcow2 --container-format bare 5ff732b2-772c-419e-9665-34fe859e421d Vol-To-Img-Test
+
+
+[root@maersk src]# source admin-openrc.sh 
+
+[root@maersk src]# cinder upload-to-image --disk-format qcow2 --container-format bare 5ff732b2-772c-419e-9665-34fe859e421d Vol-To-Img-Test
++---------------------+--------------------------------------+
+|       Property      |                Value                 |
++---------------------+--------------------------------------+
+|   container_format  |                 bare                 |
+|     disk_format     |                qcow2                 |
+| display_description |                 None                 |
+|          id         | 5ff732b2-772c-419e-9665-34fe859e421d |
+|       image_id      | 54d8eb2f-5505-4004-b3a5-3eacb3e0cbcb |
+|      image_name     |           Vol-To-Img-Test            |
+|         size        |                 100                  |
+|        status       |              uploading               |
+|      updated_at     |      2016-03-12T03:55:54.000000      |
+|     volume_type     |                 None                 |
++---------------------+--------------------------------------+
+
+
+
+
+[root@maersk src]# glance image-show 54d8eb2f-5505-4004-b3a5-3eacb3e0cbcb
++------------------+--------------------------------------+
+| Property         | Value                                |
++------------------+--------------------------------------+
+| checksum         | 1e9774a8a8c1383eed2bb6d9f506e7d3     |
+| container_format | bare                                 |
+| created_at       | 2016-03-12T03:56:02Z                 |
+| disk_format      | qcow2                                |
+| id               | 54d8eb2f-5505-4004-b3a5-3eacb3e0cbcb |
+| min_disk         | 0                                    |
+| min_ram          | 0                                    |
+| name             | Vol-To-Img-Test                      |
+| owner            | fdf3f98a9b0c4e9e94603d8a84ea41a8     |
+| protected        | False                                |
+| size             | 5954928640                           |
+| status           | active                               |
+| tags             | []                                   |
+| updated_at       | 2016-03-12T04:26:14Z                 |
+| virtual_size     | None                                 |
+| visibility       | private                              |
++------------------+--------------------------------------+
+
+
+
+
+
+
+
+
+
+
+Launch Instance From Volume
+http://docs.openstack.org/user-guide/cli_nova_launch_instance_from_volume.html
+
+
+
+nova boot --flavor FLAVOR --image IMAGE_ID --swap 512 --ephemeral size=2 NAME
+
+==================
+Checksum Test Works
+
+[root@maersk src]# glance image-download de89b504-cd34-42e1-8543-07221cb0ffe1 | md5sum  
+60e5fc17a4f2a7269d5d84c7761ce31d  -
+[root@maersk src]# glance image-download de89b504-cd34-42e1-8543-07221cb0ffe1 | md5sum  
+60e5fc17a4f2a7269d5d84c7761ce31d  -
+[root@maersk src]# glance image-download de89b504-cd34-42e1-8543-07221cb0ffe1 | md5sum  
+60e5fc17a4f2a7269d5d84c7761ce31d  -
+[root@maersk src]# glance image-download de89b504-cd34-42e1-8543-07221cb0ffe1 | md5sum  
+60e5fc17a4f2a7269d5d84c7761ce31d  -
+[root@maersk src]# glance image-download de89b504-cd34-42e1-8543-07221cb0ffe1 | md5sum  
+60e5fc17a4f2a7269d5d84c7761ce31d  -
+[root@maersk src]# glance image-show de89b504-cd34-42e1-8543-07221cb0ffe1
++------------------+--------------------------------------+
+| Property         | Value                                |
++------------------+--------------------------------------+
+| checksum         | 60e5fc17a4f2a7269d5d84c7761ce31d     |
+| container_format | bare                                 |
+| created_at       | 2016-03-12T00:16:28Z                 |
+| description      | CentOS 7 Installer image from ISO    |
+| disk_format      | qcow2                                |
+| id               | de89b504-cd34-42e1-8543-07221cb0ffe1 |
+| min_disk         | 4                                    |
+| min_ram          | 2000                                 |
+| name             | CentOS-7-Installer                   |
+| owner            | fdf3f98a9b0c4e9e94603d8a84ea41a8     |
+| protected        | False                                |
+| size             | 4236247040                           |
+| status           | active                               |
+| tags             | []                                   |
+| updated_at       | 2016-03-12T00:16:44Z                 |
+| virtual_size     | None                                 |
+| visibility       | public                               |
++------------------+--------------------------------------+
+

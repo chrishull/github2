@@ -1,0 +1,2038 @@
+Liberty Install
+
+
+http://docs.openstack.org/liberty/install-guide-rdo/common/conventions.html
+
+========================================================================
+Prerequisites
+========================================================================
+
+Install basic CentOS.
+Create a statuc network.  Single interface.   My ip is 172.22.10.99
+
+DISABLE SELUNUX
+add controller to /etc/hosts   172.22.10.99 or it will not connect to MariaDB
+
+
+==============================
+Install NTP
+==============================
+This aooears to already be running with install of CentOS Dev (Desktop)
+
+http://docs.openstack.org/liberty/install-guide-rdo/environment-ntp.html
+
+On the controller node
+yum install chrony -y
+Package chrony-2.1.1-1.el7.centos.x86_64 already installed and latest version
+
+vi /etc/chrony.conf 
+file and add, change, or remove the following keys as necessary for your environment:
+
+server NTP_SERVER iburst
+allow 172.22.10.0/24
+
+systemctl enable chronyd.service
+systemctl start chronyd.service
+
+[root@maersk sleestack]# chronyc sources
+210 Number of sources = 4
+MS Name/IP address         Stratum Poll Reach LastRx Last sample
+===============================================================================
+^+ time-a.timefreq.bldrdoc.g     1  10   377   709  +1406us[+1406us] +/-   28ms
+^- 207.196.240.30                3  10   377    72  -1881us[-1881us] +/-  138ms
+^+ chl.la                        2  10   377   760   +425us[ +425us] +/-   45ms
+^* srcf-ntp.stanford.edu         1  10   377   814   -356us[ -756us] +/-   15ms
+
+
+
+==============================
+Install Openstack Packages
+==============================
+
+Your hosts must contain the latest versions of base installation packages available for your 
+distribution before proceeding further.
+
+yum update -y
+
+Disable or remove any automatic update services because they can impact your OpenStack environment.
+
+Prerequisites
+
+It is recommended to disable EPEL when using RDO packages due to some updates in EPEL breaking 
+backwards compatibility. Or preferably pin packages versions using the yum-versionlock plugin
+
+[root@maersk sleestack]# yum repolist enabled
+Loaded plugins: fastestmirror, langpacks
+Loading mirror speeds from cached hostfile
+ * base: mirrors.syringanetworks.net
+ * extras: mirrors.syringanetworks.net
+ * updates: mirrors.syringanetworks.net
+repo id                                                                       repo name                                                                        status
+base/7/x86_64                                                                 CentOS-7 - Base                                                                  9,007
+extras/7/x86_64                                                               CentOS-7 - Extras                                                                  226
+updates/7/x86_64                                                              CentOS-7 - Updates                                                                 848
+repolist: 10,081
+
+====
+To remove
+====
+yum remove epel-release
+
+Once you have the correct epel-release package installed then you will need to rm the 
+/var/cache/yum/epel/ directory and possibly/var/cache/yum/x86_64/6/epel/ as well .
+
+There seems to be no EPEL
+
+[root@maersk sleestack]# yum remove epel-release
+Loaded plugins: fastestmirror, langpacks
+No Match for argument: epel-release
+No Packages marked for removal
+
+
+====
+On centos  enable Openstack Repos
+====
+
+yum install centos-release-openstack-liberty -y
+yum upgrade -y
+yum install python-openstackclient -y
+yum install openstack-selinux -y
+
+
+
+==============================
+Install SQL   MariaDB
+==============================
+
+yum install mariadb mariadb-server MySQL-python -y
+
+
+vi /etc/my.cnf.d/mariadb_openstack.cnf
+
+[mysqld]
+
+bind-address = 172.22.10.99
+
+default-storage-engine = innodb
+innodb_file_per_table
+collation-server = utf8_general_ci
+init-connect = 'SET NAMES utf8'
+character-set-server = utf8
+
+systemctl enable mariadb.service
+systemctl start mariadb.service
+
+Secure the DB    Run thsi script from any location.  It's in the path
+ALSO   When it asks for root password, it doesn't seem to like it.  Just hit enter.
+
+DB_ADMIN_PASSWORD   openg00dle232
+
+
+
+==============================
+Install NoSQL   MongoDB
+Used by Telemetry
+==============================
+
+yum install mongodb-server mongodb -y
+
+vi /etc/mongod.conf 
+
+
+bind_ip = 172.22.10.99   (devault to 127.0.0.1  OK in this case)
+
+smallfiles = true    (this is commented out.  Uncomment it)
+
+
+systemctl enable mongod.service
+systemctl start mongod.service
+
+
+==============================
+Install RabbitMQ
+==============================
+
+yum install rabbitmq-server -y
+
+systemctl enable rabbitmq-server.service
+systemctl start rabbitmq-server.service
+
+rabbitmqctl add_user openstack open.g00dke232                   (RABBIT_PASS)
+
+rabbitmqctl set_permissions openstack ".*" ".*" ".*"
+
+
+
+========================================================================
+Install Identity
+========================================================================
+
+
+
+
+mysql -u root -p 
+openg00dle232 
+
+CREATE DATABASE keystone;
+GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' IDENTIFIED BY 'sleestack191';
+GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY 'sleestack191';
+ 
+
+[root@maersk sleestack]# openssl rand -hex 10
+91121d2c109d7fc778e4
+
+Edit Config Files (Pluto)
+
+Default configuration files vary by distribution. You might need to add these sections and options 
+rather than modifying existing sections and options. Also, an ellipsis (...) in the configuration 
+snippets indicates potential default configuration options that you should retain.
+
+
+
+yum install openstack-keystone httpd mod_wsgi memcached python-memcached  -y
+
+systemctl enable memcached.service
+systemctl start memcached.service
+
+Edit keystone.conf
+
+BatchFileProcessor Switching to .conf file keystone.conf
+BatchFileProcessor Set: File: keystone.conf Section: DEFAULT key: admin_token  val:  ADMIN_TOKEN
+BatchFileProcessor Set: File: keystone.conf Section: database key: connection  val:  mysql://keystone:KEYSTONE_DBPASS@controller/keystone
+BatchFileProcessor Set: File: keystone.conf Section: memcache key: servers  val:  localhost:11211
+BatchFileProcessor Set: File: keystone.conf Section: token key: provider  val:  uuid
+BatchFileProcessor Set: File: keystone.conf Section: token key: driver  val:  memcache
+BatchFileProcessor Set: File: keystone.conf Section: revoke key: driver  val:  sql
+BatchFileProcessor Set: File: keystone.conf Section: DEFAULT key: verbose  val:  True
++-------------------+-------------+---------------------------------------------------+
+| keystone: Section | Key         | Value                                             |
++-------------------+-------------+---------------------------------------------------+
+| DEFAULT           | verbose     | True                                              |
+| DEFAULT           | admin_token | 91121d2c109d7fc778e4                              |
+| database          | connection  | mysql://keystone:sleestack191@controller/keystone |
+| memcache          | servers     | localhost:11211                                   |
+| revoke            | driver      | sql                                               |
+| token             | driver      | memcache                                          |
+| token             | provider    | uuid                                              |
++-------------------+-------------+---------------------------------------------------+
+
+su -s /bin/sh -c "keystone-manage db_sync" keystone
+No handlers could be found for logger "oslo_config.cfg"
+
+====
+Config Apache
+====
+
+vi /etc/httpd/conf/httpd.conf
+
+ServerName controller
+
+create  /etc/httpd/conf.d/wsgi-keystone.conf
+
+Listen 5000
+Listen 35357
+
+<VirtualHost *:5000>
+    WSGIDaemonProcess keystone-public processes=5 threads=1 user=keystone group=keystone display-name=%{GROUP}
+    WSGIProcessGroup keystone-public
+    WSGIScriptAlias / /usr/bin/keystone-wsgi-public
+    WSGIApplicationGroup %{GLOBAL}
+    WSGIPassAuthorization On
+    <IfVersion >= 2.4>
+      ErrorLogFormat "%{cu}t %M"
+    </IfVersion>
+    ErrorLog /var/log/httpd/keystone-error.log
+    CustomLog /var/log/httpd/keystone-access.log combined
+
+    <Directory /usr/bin>
+        <IfVersion >= 2.4>
+            Require all granted
+        </IfVersion>
+        <IfVersion < 2.4>
+            Order allow,deny
+            Allow from all
+        </IfVersion>
+    </Directory>
+</VirtualHost>
+
+<VirtualHost *:35357>
+    WSGIDaemonProcess keystone-admin processes=5 threads=1 user=keystone group=keystone display-name=%{GROUP}
+    WSGIProcessGroup keystone-admin
+    WSGIScriptAlias / /usr/bin/keystone-wsgi-admin
+    WSGIApplicationGroup %{GLOBAL}
+    WSGIPassAuthorization On
+    <IfVersion >= 2.4>
+      ErrorLogFormat "%{cu}t %M"
+    </IfVersion>
+    ErrorLog /var/log/httpd/keystone-error.log
+    CustomLog /var/log/httpd/keystone-access.log combined
+
+    <Directory /usr/bin>
+        <IfVersion >= 2.4>
+            Require all granted
+        </IfVersion>
+        <IfVersion < 2.4>
+            Order allow,deny
+            Allow from all
+        </IfVersion>
+    </Directory>
+</VirtualHost>
+
+
+
+systemctl enable httpd.service
+systemctl start httpd.service
+
+!!!!!!!NOTE    add controller to /etc/hosts       
+127.0.0.1 controller
+
+!!!!!!!NOTE   HTTPD PROBABLY WON'T START.  I suspect SELinux has something to do with this.
+Can'l bind to port 5000
+RESTART.   Then you should see that it's up.
+[root@maersk src]# systemctl status   network.service  
+● network.service - LSB: Bring up/down networking
+   Loaded: loaded (/etc/rc.d/init.d/network)
+   Active: active (exited) since Fri 2016-03-04 17:49:57 EST; 8min ago
+   
+
+====
+Create the service entity and API endpoints
+====
+
+in op-service-create.sh
+
+export OS_TOKEN=91121d2c109d7fc778e4
+export OS_URL=http://controller:35357/v3
+export OS_IDENTITY_API_VERSION=3
+
+openstack service create --name keystone --description "OpenStack Identity" identity
+  
+openstack service create --name keystone --description "OpenStack Identity" identity
+Unable to establish connection to http://controller:35357/v3/services
+Takes a long time
+  
+changed controller to public IP
+[root@maersk src]# openstack service create --name keystone --description "OpenStack Identity" identity
+An unexpected error prevented the server from fulfilling your request. (HTTP 500) (Request-ID: req-5603ec65-3ba2-4c9b-9501-73772d6b3812)
+Comes back quickly
+
+WTF?
+2016-03-05 16:42:51.695 3294 ERROR keystone.common.wsgi [req-3059b920-d493-4142-b104-f59c955e5d37 - - - - -] 
+(_mysql_exceptions.ProgrammingError) (1146, "Table 'keystone.service' doesn't exist") 
+[SQL: u'INSERT INTO service (id, type, enabled, extra) VALUES (%s, %s, %s, %s)'] [parameters: 
+('17b77b89d54d4dad97a89afd5b779cb0', 'identity', 1, '{"description": "OpenStack Identity", "name": "keystone"}')]
+
+MariaDB [keystone]> show tables 
+    -> ;
++------------------------+
+| Tables_in_keystone     |
++------------------------+
+Not found.    BUT THEN  
+
+Um   ok.  So now it works?
+
+[root@maersk src]# source os-service-create.sh 
+[root@maersk src]# openstack service create --name keystone --description "OpenStack Identity" identity
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description | OpenStack Identity               |
+| enabled     | True                             |
+| id          | 2f38c47f88e54e59bb8e289644b7e8cb |
+| name        | keystone                         |
+| type        | identity                         |
++-------------+----------------------------------+
+
+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   identity public http://controller:5000/v2.0
++--------------+----------------------------------+
+| Field        | Value                            |
++--------------+----------------------------------+
+| enabled      | True                             |
+| id           | 81aac6fa56224dd3821f03e31ac94f02 |
+| interface    | public                           |
+| region       | RegionOne                        |
+| region_id    | RegionOne                        |
+| service_id   | 2f38c47f88e54e59bb8e289644b7e8cb |
+| service_name | keystone                         |
+| service_type | identity                         |
+| url          | http://controller:5000/v2.0      |
++--------------+----------------------------------+
+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   identity internal http://controller:5000/v2.0
++--------------+----------------------------------+
+| Field        | Value                            |
++--------------+----------------------------------+
+| enabled      | True                             |
+| id           | 0678a37b510d48ae94674ecc5038005f |
+| interface    | internal                         |
+| region       | RegionOne                        |
+| region_id    | RegionOne                        |
+| service_id   | 2f38c47f88e54e59bb8e289644b7e8cb |
+| service_name | keystone                         |
+| service_type | identity                         |
+| url          | http://controller:5000/v2.0      |
++--------------+----------------------------------+
+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   identity admin http://controller:35357/v2.0
++--------------+----------------------------------+
+| Field        | Value                            |
++--------------+----------------------------------+
+| enabled      | True                             |
+| id           | 4b5720c5b4cd4dc8890c7c8e0f19be62 |
+| interface    | admin                            |
+| region       | RegionOne                        |
+| region_id    | RegionOne                        |
+| service_id   | 2f38c47f88e54e59bb8e289644b7e8cb |
+| service_name | keystone                         |
+| service_type | identity                         |
+| url          | http://controller:35357/v2.0     |
++--------------+----------------------------------+
+
+
+Each service that you add to your OpenStack environment requires one or more service entities and three 
+API endpoint variants in the Identity service.
+
+
+====
+Create projects, users, and roles
+====
+
+[root@maersk src]# openstack project create --domain default \
+>   --description "Admin Project" admin
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description | Admin Project                    |
+| domain_id   | default                          |
+| enabled     | True                             |
+| id          | fdf3f98a9b0c4e9e94603d8a84ea41a8 |
+| is_domain   | False                            |
+| name        | admin                            |
+| parent_id   | None                             |
++-------------+----------------------------------+
+
+Create Admin User and Role
+
+[root@maersk src]# openstack user create --domain default \
+>   --password-prompt admin
+User Password:mk4968small23buggidntpass
+Repeat User Password:mk4968small23buggidntpass
++-----------+----------------------------------+
+| Field     | Value                            |
++-----------+----------------------------------+
+| domain_id | default                          |
+| enabled   | True                             |
+| id        | f92b402a66cf4424a78ff98389cfe9ba |
+| name      | admin                            |
++-----------+----------------------------------+
+
+[root@maersk src]# openstack role create admin
++-------+----------------------------------+
+| Field | Value                            |
++-------+----------------------------------+
+| id    | acab51c5666d4de39f1b0ee05761ac1d |
+| name  | admin                            |
++-------+----------------------------------+
+[root@maersk src]# openstack role add --project admin --user admin admin
+
+his guide uses a service project that contains a unique user for each service that you 
+add to your environment. Create the service project:
+
+[root@maersk src]# openstack project create --domain default \
+>   --description "Service Project" service
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description | Service Project                  |
+| domain_id   | default                          |
+| enabled     | True                             |
+| id          | cea2b1fc3a7c414486b23d455e736e2e |
+| is_domain   | False                            |
+| name        | service                          |
+| parent_id   | None                             |
++-------------+----------------------------------+
+
+
+Regular (non-admin) tasks should use an unprivileged project and user. As an example, 
+this guide creates the demo project and user.
+
+[root@maersk src]# openstack project create --domain default \
+>   --description "Demo Project" demo
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description | Demo Project                     |
+| domain_id   | default                          |
+| enabled     | True                             |
+| id          | 7813be77b1de4196b1c6b77006afa21c |
+| is_domain   | False                            |
+| name        | demo                             |
+| parent_id   | None                             |
++-------------+----------------------------------+
+
+[root@maersk src]# openstack user create --domain default \
+>   --password-prompt demo
+User Password:
+Repeat User Password:
++-----------+----------------------------------+
+| Field     | Value                            |
++-----------+----------------------------------+
+| domain_id | default                          |
+| enabled   | True                             |
+| id        | e8e70bfee9034cbe99d68ef5bbde540f |
+| name      | demo                             |
++-----------+----------------------------------+
+
+Create user role
+
+[root@maersk src]# openstack role create user
++-------+----------------------------------+
+| Field | Value                            |
++-------+----------------------------------+
+| id    | f72b11a72a0143d499faa528e31b9f07 |
+| name  | user                             |
++-------+----------------------------------+
+
+Add User Role to Demo Proejct
+
+openstack role add --project demo --user demo user
+
+
+====
+Verify operation
+====
+
+openstack --os-auth-url http://controller:35357/v3 \
+   --os-project-domain-id default --os-user-domain-id default \
+   --os-project-name admin --os-username admin --os-auth-type password \
+   token issue
+
+[root@maersk src]# unset OS_TOKEN OS_URL
+[root@maersk src]# openstack --os-auth-url http://controller:35357/v3 \
+>   --os-project-domain-id default --os-user-domain-id default \
+>   --os-project-name admin --os-username admin --os-auth-type password \
+>   token issue
++------------+----------------------------------+
+| Field      | Value                            |
++------------+----------------------------------+
+| expires    | 2016-03-06T00:19:40.813384Z      |
+| id         | 3110aaae228d45078b57ed4d3d61a8dd |
+| project_id | fdf3f98a9b0c4e9e94603d8a84ea41a8 |
+| user_id    | f92b402a66cf4424a78ff98389cfe9ba |
++------------+----------------------------------+
+[root@maersk src]# openstack --os-auth-url http://controller:5000/v3 \
+>   --os-project-domain-id default --os-user-domain-id default \
+>   --os-project-name demo --os-username demo --os-auth-type password \
+>   token issue
++------------+----------------------------------+
+| Field      | Value                            |
++------------+----------------------------------+
+| expires    | 2016-03-06T00:19:59.242188Z      |
+| id         | f12bd08d07c74e309451230b21c0208e |
+| project_id | 7813be77b1de4196b1c6b77006afa21c |
+| user_id    | e8e70bfee9034cbe99d68ef5bbde540f |
++------------+----------------------------------+
+
+
+
+
+====
+Defie the Admin and Demo user scripts.    admin-openrc.sh  and demo-openrc.sh
+====
+
+
+[root@maersk src]# source admin-openrc.sh 
+[root@maersk src]# openstack token issue
++------------+----------------------------------+
+| Field      | Value                            |
++------------+----------------------------------+
+| expires    | 2016-03-06T00:16:10.400953Z      |
+| id         | d6f43422f4a54a4eb5f02e2c3d62263e |
+| project_id | fdf3f98a9b0c4e9e94603d8a84ea41a8 |
+| user_id    | f92b402a66cf4424a78ff98389cfe9ba |
++------------+----------------------------------+
+
+
+
+========================================================================
+Add the Image service
+========================================================================
+
+====
+Install and Configure
+====
+
+mysql -u root -p
+CREATE DATABASE glance;
+GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' IDENTIFIED BY 'sleestack191';
+GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'%' IDENTIFIED BY 'sleestack191';
+  
+
+[root@maersk src]# openstack user create --domain default --password-prompt glance
+User Password:mk4968small23buggidntpass
+Repeat User Password:mk4968small23buggidntpass
++-----------+----------------------------------+
+| Field     | Value                            |
++-----------+----------------------------------+
+| domain_id | default                          |
+| enabled   | True                             |
+| id        | 9ad96803f08c47908ef5fd3a157c289f |
+| name      | glance                           |
++-----------+----------------------------------+
+
+[root@maersk src]# openstack role add --project service --user glance admin
+[root@maersk src]# openstack service create --name glance \
+>   --description "OpenStack Image service" image
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description | OpenStack Image service          |
+| enabled     | True                             |
+| id          | 5202da5742df4ce18e35fd052e40857f |
+| name        | glance                           |
+| type        | image                            |
++-------------+----------------------------------+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   image public http://controller:9292
++--------------+----------------------------------+
+| Field        | Value                            |
++--------------+----------------------------------+
+| enabled      | True                             |
+| id           | 70380d86334642e697c89b41310054a3 |
+| interface    | public                           |
+| region       | RegionOne                        |
+| region_id    | RegionOne                        |
+| service_id   | 5202da5742df4ce18e35fd052e40857f |
+| service_name | glance                           |
+| service_type | image                            |
+| url          | http://controller:9292           |
++--------------+----------------------------------+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   image internal http://controller:9292
++--------------+----------------------------------+
+| Field        | Value                            |
++--------------+----------------------------------+
+| enabled      | True                             |
+| id           | 57d17d68b1ba4da39f19828168213d16 |
+| interface    | internal                         |
+| region       | RegionOne                        |
+| region_id    | RegionOne                        |
+| service_id   | 5202da5742df4ce18e35fd052e40857f |
+| service_name | glance                           |
+| service_type | image                            |
+| url          | http://controller:9292           |
++--------------+----------------------------------+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   image admin http://controller:9292
++--------------+----------------------------------+
+| Field        | Value                            |
++--------------+----------------------------------+
+| enabled      | True                             |
+| id           | e0cca69020a145a395738fb436e2b30f |
+| interface    | admin                            |
+| region       | RegionOne                        |
+| region_id    | RegionOne                        |
+| service_id   | 5202da5742df4ce18e35fd052e40857f |
+| service_name | glance                           |
+| service_type | image                            |
+| url          | http://controller:9292           |
++--------------+----------------------------------+
+
+
+yum install openstack-glance python-glance python-glanceclient -y
+
+Edit the Glance conf files with Pluto.py
+
++--------------------------+---------------------+-----------------------------------------------+
+| glance-registry: Section | Key                 | Value                                         |
++--------------------------+---------------------+-----------------------------------------------+
+| DEFAULT                  | verbose             | True                                          |
+| DEFAULT                  | notification_driver | noop                                          |
+| database                 | connection          | mysql://glance:sleestack191@controller/glance |
+| keystone_authtoken       | password            | mk4968small23buggidntpass                     |
+| keystone_authtoken       | username            | glance                                        |
+| keystone_authtoken       | project_name        | service                                       |
+| keystone_authtoken       | user_domain_id      | default                                       |
+| keystone_authtoken       | project_domain_id   | default                                       |
+| keystone_authtoken       | auth_plugin         | password                                      |
+| keystone_authtoken       | auth_url            | http://controller:35357                       |
+| keystone_authtoken       | auth_uri            | http://controller:5000                        |
+| paste_deploy             | flavor              | keystone                                      |
++--------------------------+---------------------+-----------------------------------------------+
++---------------------+--------------------------+-----------------------------------------------+
+| glance-api: Section | Key                      | Value                                         |
++---------------------+--------------------------+-----------------------------------------------+
+| DEFAULT             | verbose                  | True                                          |
+| DEFAULT             | notification_driver      | noop                                          |
+| database            | connection               | mysql://glance:sleestack191@controller/glance |
+| glance_store        | filesystem_store_datadir | /var/lib/glance/images/                       |
+| glance_store        | default_store            | file                                          |
+| keystone_authtoken  | password                 | mk4968small23buggidntpass                     |
+| keystone_authtoken  | username                 | glance                                        |
+| keystone_authtoken  | project_name             | service                                       |
+| keystone_authtoken  | user_domain_id           | default                                       |
+| keystone_authtoken  | project_domain_id        | default                                       |
+| keystone_authtoken  | auth_plugin              | password                                      |
+| keystone_authtoken  | auth_url                 | http://controller:35357                       |
+| keystone_authtoken  | auth_uri                 | http://controller:5000                        |
+| paste_deploy        | flavor                   | keystone                                      |
++---------------------+--------------------------+-----------------------------------------------+
+
+
+[root@maersk src]# su -s /bin/sh -c "glance-manage db_sync" glance
+No handlers could be found for logger "oslo_config.cfg"
+[root@maersk src]# 
+
+[root@maersk src]# systemctl enable openstack-glance-api.service \
+>   openstack-glance-registry.service
+Created symlink from /etc/systemd/system/multi-user.target.wants/openstack-glance-api.service to /usr/lib/systemd/system/openstack-glance-api.service.
+Created symlink from /etc/systemd/system/multi-user.target.wants/openstack-glance-registry.service to /usr/lib/systemd/system/openstack-glance-registry.service.
+[root@maersk src]# systemctl start openstack-glance-api.service \
+>   openstack-glance-registry.service
+[root@maersk src]# 
+
+
+====
+Verify operation¶
+====
+
+Add to admin and demo
+export OS_IMAGE_API_VERSION=2
+source admin
+
+Grab Cirros
+
+wget http://download.cirros-cloud.net/0.3.4/cirros-0.3.4-x86_64-disk.img
+
+
+Upload Cirros to Glance
+
+[root@maersk sleestack]# glance image-create --name "cirros" \
+>   --file cirros-0.3.4-x86_64-disk.img \
+>   --disk-format qcow2 --container-format bare \
+>   --visibility public --progress
+[=============================>] 100%
++------------------+--------------------------------------+
+| Property         | Value                                |
++------------------+--------------------------------------+
+| checksum         | ee1eca47dc88f4879d8a229cc70a07c6     |
+| container_format | bare                                 |
+| created_at       | 2016-03-05T23:47:38Z                 |
+| disk_format      | qcow2                                |
+| id               | eba7c78e-d214-4164-ad94-5ad9ebceea7c |
+| min_disk         | 0                                    |
+| min_ram          | 0                                    |
+| name             | cirros                               |
+| owner            | fdf3f98a9b0c4e9e94603d8a84ea41a8     |
+| protected        | False                                |
+| size             | 13287936                             |
+| status           | active                               |
+| tags             | []                                   |
+| updated_at       | 2016-03-05T23:47:38Z                 |
+| virtual_size     | None                                 |
+| visibility       | public                               |
++------------------+--------------------------------------+
+
+[root@maersk sleestack]# glance image-list  
++--------------------------------------+--------+
+| ID                                   | Name   |
++--------------------------------------+--------+
+| eba7c78e-d214-4164-ad94-5ad9ebceea7c | cirros |
++--------------------------------------+--------+
+
+
+
+
+========================================================================
+Add the Compute service
+========================================================================
+http://docs.openstack.org/liberty/install-guide-rdo/nova.html
+
+
+========
+CONTROLLER CONTROLLER CONTROLLER CONTROLLER 
+Install and configure controller node
+========
+http://docs.openstack.org/liberty/install-guide-rdo/nova-controller-install.html
+
+mysql -u root -p
+
+CREATE DATABASE nova;
+GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'localhost' IDENTIFIED BY 'sleestack191';
+GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'%' IDENTIFIED BY 'sleestack191';
+  
+[root@maersk src]# source admin-openrc.sh 
+[root@maersk src]# openstack user create --domain default --password-prompt nova
+User Password:
+Repeat User Password:
++-----------+----------------------------------+
+| Field     | Value                            |
++-----------+----------------------------------+
+| domain_id | default                          |
+| enabled   | True                             |
+| id        | a8df132f920e4ca8be0f1d98f4567ed5 |
+| name      | nova                             |
++-----------+----------------------------------+
+[root@maersk src]# openstack role add --project service --user nova admin
+[root@maersk src]# openstack service create --name nova \
+>   --description "OpenStack Compute" compute
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description | OpenStack Compute                |
+| enabled     | True                             |
+| id          | 4bc9449e31b843c8af6448a02b975998 |
+| name        | nova                             |
+| type        | compute                          |
++-------------+----------------------------------+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   compute public http://controller:8774/v2/%\(tenant_id\)s
++--------------+-----------------------------------------+
+| Field        | Value                                   |
++--------------+-----------------------------------------+
+| enabled      | True                                    |
+| id           | 6efe9bfe461b40218866912106cd1bc8        |
+| interface    | public                                  |
+| region       | RegionOne                               |
+| region_id    | RegionOne                               |
+| service_id   | 4bc9449e31b843c8af6448a02b975998        |
+| service_name | nova                                    |
+| service_type | compute                                 |
+| url          | http://controller:8774/v2/%(tenant_id)s |
++--------------+-----------------------------------------+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   compute internal http://controller:8774/v2/%\(tenant_id\)s
++--------------+-----------------------------------------+
+| Field        | Value                                   |
++--------------+-----------------------------------------+
+| enabled      | True                                    |
+| id           | 942cf19875054ae8992aa8489a003ce4        |
+| interface    | internal                                |
+| region       | RegionOne                               |
+| region_id    | RegionOne                               |
+| service_id   | 4bc9449e31b843c8af6448a02b975998        |
+| service_name | nova                                    |
+| service_type | compute                                 |
+| url          | http://controller:8774/v2/%(tenant_id)s |
++--------------+-----------------------------------------+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   compute admin http://controller:8774/v2/%\(tenant_id\)s
++--------------+-----------------------------------------+
+| Field        | Value                                   |
++--------------+-----------------------------------------+
+| enabled      | True                                    |
+| id           | ede15fc8bd9141a588932511ad2ca978        |
+| interface    | admin                                   |
+| region       | RegionOne                               |
+| region_id    | RegionOne                               |
+| service_id   | 4bc9449e31b843c8af6448a02b975998        |
+| service_name | nova                                    |
+| service_type | compute                                 |
+| url          | http://controller:8774/v2/%(tenant_id)s |
++--------------+-----------------------------------------+
+
+yum install openstack-nova-api openstack-nova-cert \
+  openstack-nova-conductor openstack-nova-console \
+  openstack-nova-novncproxy openstack-nova-scheduler \
+  python-novaclient -y
+  
+  
+Config with Pluto
+
++-----------------------+-------------------------------+----------------------------------------------------------+
+| nova: Section         | Key                           | Value                                                    |
++-----------------------+-------------------------------+----------------------------------------------------------+
+| DEFAULT               | verbose                       | True                                                     |
+| DEFAULT               | enabled_apis                  | osapi_compute,metadata                                   |
+| DEFAULT               | firewall_driver               | nova.virt.firewall.NoopFirewallDriver                    |
+| DEFAULT               | linuxnet_interface_driver     | nova.network.linux_net.NeutronLinuxBridgeInterfaceDriver |
+| DEFAULT               | security_group_api            | neutron                                                  |
+| DEFAULT               | network_api_class             | nova.network.neutronv2.api.API                           |
+| DEFAULT               | my_ip                         | 172.22.10.99                                             |
+| DEFAULT               | auth_strategy                 | keystone                                                 |
+| DEFAULT               | rpc_backend                   | rabbit                                                   |
+| database              | connection                    | mysql://nova:sleestack191@controller/nova                |
+| glance                | host                          | controller                                               |
+| keystone_authtoken    | password                      | mk4968small23buggidntpass                                |
+| keystone_authtoken    | username                      | nova                                                     |
+| keystone_authtoken    | project_name                  | service                                                  |
+| keystone_authtoken    | user_domain_id                | default                                                  |
+| keystone_authtoken    | project_domain_id             | default                                                  |
+| keystone_authtoken    | auth_plugin                   | password                                                 |
+| keystone_authtoken    | auth_url                      | http://controller:35357                                  |
+| keystone_authtoken    | auth_uri                      | http://controller:5000                                   |
+| oslo_concurrency      | lock_path                     | /var/lib/nova/tmp                                        |
+| oslo_messaging_rabbit | rabbit_password               | open.g00dke232                                           |
+| oslo_messaging_rabbit | rabbit_userid                 | openstack                                                |
+| oslo_messaging_rabbit | rabbit_host                   | controller                                               |
+| vnc                   | vncserver_proxyclient_address | $my_ip                                                   |
+| vnc                   | vncserver_listen              | $my_ip                                                   |
++-----------------------+-------------------------------+----------------------------------------------------------+
+
+  
+[root@maersk src]# su -s /bin/sh -c "nova-manage db sync" nova
+No handlers could be found for logger "oslo_config.cfg"
+
+
+[root@maersk src]# systemctl enable openstack-nova-api.service \
+>   openstack-nova-cert.service openstack-nova-consoleauth.service \
+>   openstack-nova-scheduler.service openstack-nova-conductor.service \
+>   openstack-nova-novncproxy.service
+Created symlink from /etc/systemd/system/multi-user.target.wants/openstack-nova-api.service to /usr/lib/systemd/system/openstack-nova-api.service.
+Created symlink from /etc/systemd/system/multi-user.target.wants/openstack-nova-cert.service to /usr/lib/systemd/system/openstack-nova-cert.service.
+Created symlink from /etc/systemd/system/multi-user.target.wants/openstack-nova-consoleauth.service to /usr/lib/systemd/system/openstack-nova-consoleauth.service.
+Created symlink from /etc/systemd/system/multi-user.target.wants/openstack-nova-scheduler.service to /usr/lib/systemd/system/openstack-nova-scheduler.service.
+Created symlink from /etc/systemd/system/multi-user.target.wants/openstack-nova-conductor.service to /usr/lib/systemd/system/openstack-nova-conductor.service.
+Created symlink from /etc/systemd/system/multi-user.target.wants/openstack-nova-novncproxy.service to /usr/lib/systemd/system/openstack-nova-novncproxy.service.
+[root@maersk src]# systemctl start openstack-nova-api.service \
+>   openstack-nova-cert.service openstack-nova-consoleauth.service \
+>   openstack-nova-scheduler.service openstack-nova-conductor.service \
+>   openstack-nova-novncproxy.service
+[root@maersk src]# 
+
+====
+Verify Operation
+====
+
+source admin-openrc.sh
+
+EXAMPLE SAYS
+$ nova service-list
++----+------------------+------------+----------+---------+-------+--------------+-----------------+
+| Id | Binary           | Host       | Zone     | Status  | State | Updated_at   | Disabled Reason |
++----+------------------+------------+----------+---------+-------+--------------+-----------------+
+| 1  | nova-conductor   | controller | internal | enabled | up    | 2014-09-16.. | -               |
+| 2  | nova-consoleauth | controller | internal | enabled | up    | 2014-09-16.. | -               |
+| 3  | nova-scheduler   | controller | internal | enabled | up    | 2014-09-16.. | -               |
+| 4  | nova-cert        | controller | internal | enabled | up    | 2014-09-16.. | -               |
+| 5  | nova-compute     | compute1   | nova     | enabled | up    | 2014-09-16.. | -               |
++----+------------------+------------+----------+---------+-------+--------------+-----------------+
+
+AFTER NOVA COMPUTE is installed (see next section) you will get all 5 services.
+Otherwise, nova-compute will be missing.
+[root@maersk src]# nova service-list
++----+------------------+--------+----------+---------+-------+----------------------------+-----------------+
+| Id | Binary           | Host   | Zone     | Status  | State | Updated_at                 | Disabled Reason |
++----+------------------+--------+----------+---------+-------+----------------------------+-----------------+
+| 1  | nova-conductor   | maersk | internal | enabled | up    | 2016-03-07T20:59:36.000000 | -               |
+| 2  | nova-consoleauth | maersk | internal | enabled | up    | 2016-03-07T20:59:34.000000 | -               |
+| 3  | nova-cert        | maersk | internal | enabled | up    | 2016-03-07T20:59:37.000000 | -               |
+| 4  | nova-scheduler   | maersk | internal | enabled | up    | 2016-03-07T20:59:38.000000 | -               |
+| 5  | nova-compute     | maersk | nova     | enabled | up    | 2016-03-07T20:59:34.000000 | -               |
++----+------------------+--------+----------+---------+-------+----------------------------+-----------------+
+
+
+nova endpoints
+WARNING: keystone has no endpoint in ! Available endpoints for this service:
++-----------+----------------------------------+
+| keystone  | Value                            |
++-----------+----------------------------------+
+| id        | 0678a37b510d48ae94674ecc5038005f |
+| interface | internal                         |
+| region    | RegionOne                        |
+| region_id | RegionOne                        |
+| url       | http://controller:5000/v2.0      |
++-----------+----------------------------------+
++-----------+----------------------------------+
+| keystone  | Value                            |
++-----------+----------------------------------+
+| id        | 4b5720c5b4cd4dc8890c7c8e0f19be62 |
+| interface | admin                            |
+| region    | RegionOne                        |
+| region_id | RegionOne                        |
+| url       | http://controller:35357/v2.0     |
++-----------+----------------------------------+
++-----------+----------------------------------+
+| keystone  | Value                            |
++-----------+----------------------------------+
+| id        | 81aac6fa56224dd3821f03e31ac94f02 |
+| interface | public                           |
+| region    | RegionOne                        |
+| region_id | RegionOne                        |
+| url       | http://controller:5000/v2.0      |
++-----------+----------------------------------+
+WARNING: nova has no endpoint in ! Available endpoints for this service:
++-----------+------------------------------------------------------------+
+| nova      | Value                                                      |
++-----------+------------------------------------------------------------+
+| id        | 6efe9bfe461b40218866912106cd1bc8                           |
+| interface | public                                                     |
+| region    | RegionOne                                                  |
+| region_id | RegionOne                                                  |
+| url       | http://controller:8774/v2/fdf3f98a9b0c4e9e94603d8a84ea41a8 |
++-----------+------------------------------------------------------------+
++-----------+------------------------------------------------------------+
+| nova      | Value                                                      |
++-----------+------------------------------------------------------------+
+| id        | 942cf19875054ae8992aa8489a003ce4                           |
+| interface | internal                                                   |
+| region    | RegionOne                                                  |
+| region_id | RegionOne                                                  |
+| url       | http://controller:8774/v2/fdf3f98a9b0c4e9e94603d8a84ea41a8 |
++-----------+------------------------------------------------------------+
++-----------+------------------------------------------------------------+
+| nova      | Value                                                      |
++-----------+------------------------------------------------------------+
+| id        | ede15fc8bd9141a588932511ad2ca978                           |
+| interface | admin                                                      |
+| region    | RegionOne                                                  |
+| region_id | RegionOne                                                  |
+| url       | http://controller:8774/v2/fdf3f98a9b0c4e9e94603d8a84ea41a8 |
++-----------+------------------------------------------------------------+
+WARNING: glance has no endpoint in ! Available endpoints for this service:
++-----------+----------------------------------+
+| glance    | Value                            |
++-----------+----------------------------------+
+| id        | 57d17d68b1ba4da39f19828168213d16 |
+| interface | internal                         |
+| region    | RegionOne                        |
+| region_id | RegionOne                        |
+| url       | http://controller:9292           |
++-----------+----------------------------------+
++-----------+----------------------------------+
+| glance    | Value                            |
++-----------+----------------------------------+
+| id        | 70380d86334642e697c89b41310054a3 |
+| interface | public                           |
+| region    | RegionOne                        |
+| region_id | RegionOne                        |
+| url       | http://controller:9292           |
++-----------+----------------------------------+
++-----------+----------------------------------+
+| glance    | Value                            |
++-----------+----------------------------------+
+| id        | e0cca69020a145a395738fb436e2b30f |
+| interface | admin                            |
+| region    | RegionOne                        |
+| region_id | RegionOne                        |
+| url       | http://controller:9292           |
++-----------+----------------------------------+
+[root@maersk src]# 
+
+WARNING???    Well.  I see the three endpoints for each that I was supposed to create.
+admin, public, and internal.   Not sure what "!" is supposed to be.
+
+[root@maersk src]# nova image-list
++--------------------------------------+--------+--------+--------+
+| ID                                   | Name   | Status | Server |
++--------------------------------------+--------+--------+--------+
+| eba7c78e-d214-4164-ad94-5ad9ebceea7c | cirros | ACTIVE |        |
++--------------------------------------+--------+--------+--------+
+
+Yep  Working.
+
+========
+COMPUTE COMPUTE COMPUTE COMPUTE 
+Install and configure a compute node
+========
+
+http://docs.openstack.org/liberty/install-guide-rdo/nova-compute-install.html
+
+This section assumes that you are following the instructions in this guide 
+step-by-step to configure the first compute node. If you want to configure 
+additional compute nodes, prepare them in a similar fashion to the first 
+compute node in the example architectures section. Each additional compute 
+node requires a unique IP address.
+
+yum install openstack-nova-compute sysfsutils -y
+Package sysfsutils-2.1.0-16.el7.x86_64 already installed and latest version
+Nothing to do
+
+[root@maersk src]# ./pluto.py process -p /etc ../batch-files/liberty-nova-compute-install.txt 
+Processing using file: ../batch-files/liberty-nova-compute-install.txt
+BatchFileProcessor Processing merge file: ../batch-files/liberty-nova-compute-install.txt
+BatchFileProcessor Running installation for: Liberty Nova compute service initial install
++-----------------------+-------------------------------+----------------------------------------------------------+
+| nova: Section         | Key                           | Value                                                    |
++-----------------------+-------------------------------+----------------------------------------------------------+
+| DEFAULT               | verbose                       | True                                                     |
+| DEFAULT               | enabled_apis                  | osapi_compute,metadata                                   |
+| DEFAULT               | firewall_driver               | nova.virt.firewall.NoopFirewallDriver                    |
+| DEFAULT               | linuxnet_interface_driver     | nova.network.linux_net.NeutronLinuxBridgeInterfaceDriver |
+| DEFAULT               | security_group_api            | neutron                                                  |
+| DEFAULT               | network_api_class             | nova.network.neutronv2.api.API                           |
+| DEFAULT               | my_ip                         | 172.22.10.99                                             |
+| DEFAULT               | auth_strategy                 | keystone                                                 |
+| DEFAULT               | rpc_backend                   | rabbit                                                   |
+| database              | connection                    | mysql://nova:sleestack191@controller/nova                |
+| glance                | host                          | controller                                               |
+| keystone_authtoken    | password                      | mk4968small23buggidntpass                                |
+| keystone_authtoken    | username                      | nova                                                     |
+| keystone_authtoken    | project_name                  | service                                                  |
+| keystone_authtoken    | user_domain_id                | default                                                  |
+| keystone_authtoken    | project_domain_id             | default                                                  |
+| keystone_authtoken    | auth_plugin                   | password                                                 |
+| keystone_authtoken    | auth_url                      | http://controller:35357                                  |
+| keystone_authtoken    | auth_uri                      | http://controller:5000                                   |
+| neutron               | metadata_proxy_shared_secret  | sekritsqsnuts                                            |
+| neutron               | service_metadata_proxy        | True                                                     |
+| neutron               | password                      | mk4968small23buggidntpass                                |
+| neutron               | username                      | neutron                                                  |
+| neutron               | project_name                  | service                                                  |
+| neutron               | region_name                   | RegionOne                                                |
+| neutron               | user_domain_id                | default                                                  |
+| neutron               | project_domain_id             | default                                                  |
+| neutron               | auth_plugin                   | password                                                 |
+| neutron               | auth_url                      | http://controller:35357                                  |
+| neutron               | url                           | http://controller:9696                                   |
+| oslo_concurrency      | lock_path                     | /var/lib/nova/tmp                                        |
+| oslo_messaging_rabbit | rabbit_password               | open.g00dke232                                           |
+| oslo_messaging_rabbit | rabbit_userid                 | openstack                                                |
+| oslo_messaging_rabbit | rabbit_host                   | controller                                               |
+| vnc                   | novncproxy_base_url           | http://controller:6080/vnc_auto.html                     |
+| vnc                   | enabled                       | True                                                     |
+| vnc                   | vncserver_proxyclient_address | $my_ip                                                   |
+| vnc                   | vncserver_listen              | 0.0.0.0                                                  |
++-----------------------+-------------------------------+----------------------------------------------------------+
+
+
+Determine whether your compute node supports hardware acceleration for virtual machines:
+YOU CAN SWITCH THIS ON VIA BIOS SETTINGS.  ALL MODERN MACHINES SUPPORT THIS.
+If this command returns a value of one or greater, your compute node 
+supports hardware acceleration which typically requires no additional configuration.
+
+[root@maersk src]# egrep -c '(vmx|svm)' /proc/cpuinfo
+8
+
+Finalize
+
+systemctl enable libvirtd.service openstack-nova-compute.service
+systemctl start libvirtd.service openstack-nova-compute.service
+
+
+
+
+
+========================================================================
+========================================================================
+========================================================================
+Add the Networking service
+========================================================================
+========================================================================
+========================================================================
+if you can
+
+========
+START CONTROLLER  CONTROLLER  CONTROLLER  CONTROLLER  
+Install and configure controller node
+========
+http://docs.openstack.org/liberty/install-guide-rdo/neutron-controller-install.html
+
+mysql -u root -p
+openg00dle232
+
+CREATE DATABASE neutron;
+GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'localhost' IDENTIFIED BY 'sleestack191';
+GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'%' IDENTIFIED BY 'sleestack191';
+  
+
+[root@maersk src]# source admin-openrc.sh 
+[root@maersk src]# openstack user create --domain default --password-prompt neutron
+User Password:
+Repeat User Password:
++-----------+----------------------------------+
+| Field     | Value                            |
++-----------+----------------------------------+
+| domain_id | default                          |
+| enabled   | True                             |
+| id        | e883e2b54efa42f388376c1bfc5ece7b |
+| name      | neutron                          |
++-----------+----------------------------------+
+[root@maersk src]# openstack role add --project service --user neutron admin
+[root@maersk src]# openstack service create --name neutron \
+>   --description "OpenStack Networking" network
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description | OpenStack Networking             |
+| enabled     | True                             |
+| id          | d15681bef4ee4a14b5f4b4ce571a01c3 |
+| name        | neutron                          |
+| type        | network                          |
++-------------+----------------------------------+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   network public http://controller:9696
++--------------+----------------------------------+
+| Field        | Value                            |
++--------------+----------------------------------+
+| enabled      | True                             |
+| id           | ab9127be844c4dd4aac257299416175c |
+| interface    | public                           |
+| region       | RegionOne                        |
+| region_id    | RegionOne                        |
+| service_id   | d15681bef4ee4a14b5f4b4ce571a01c3 |
+| service_name | neutron                          |
+| service_type | network                          |
+| url          | http://controller:9696           |
++--------------+----------------------------------+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   network internal http://controller:9696
++--------------+----------------------------------+
+| Field        | Value                            |
++--------------+----------------------------------+
+| enabled      | True                             |
+| id           | 9955588cfc13450f9a72ce4da49a2ad9 |
+| interface    | internal                         |
+| region       | RegionOne                        |
+| region_id    | RegionOne                        |
+| service_id   | d15681bef4ee4a14b5f4b4ce571a01c3 |
+| service_name | neutron                          |
+| service_type | network                          |
+| url          | http://controller:9696           |
++--------------+----------------------------------+
+[root@maersk src]# openstack endpoint create --region RegionOne \
+>   network admin http://controller:9696
++--------------+----------------------------------+
+| Field        | Value                            |
++--------------+----------------------------------+
+| enabled      | True                             |
+| id           | 347aea0b2ef944f4ae00a1f4b9d323a3 |
+| interface    | admin                            |
+| region       | RegionOne                        |
+| region_id    | RegionOne                        |
+| service_id   | d15681bef4ee4a14b5f4b4ce571a01c3 |
+| service_name | neutron                          |
+| service_type | network                          |
+| url          | http://controller:9696           |
++--------------+----------------------------------+
+
+
+====
+Configure Network Options
+====
+
+Option 2 augments option 1 with layer-3 services that support attaching instances to self-service (private) 
+networks. The demo or other unprivileged user can manage self-service networks including routers that 
+provide connectivity between self-service and provider networks. Additionally, floating IP addresses 
+provide connectivity to instances using self-service networks from external networks such as the Internet.
+
+Note
+Option 2 also supports attaching instances to public (provider) networks.
+
+--------
+Choose one of the following networking options to configure services specific to it. Afterwards, 
+return here and proceed to Configure the metadata agent.
+--------
+
+====
+Networking Option 2: Self-service networks
+This part takes place on a sub-page.   
+http://docs.openstack.org/liberty/install-guide-rdo/neutron-controller-install-option2.html
+====
+
+yum install openstack-neutron openstack-neutron-ml2 \
+  openstack-neutron-linuxbridge python-neutronclient ebtables ipset -y
+  
+Cinfigure neutron.conf using Pluto
+
++-----------------------+------------------------------------+-------------------------------------------------+
+| neutron: Section      | Key                                | Value                                           |
++-----------------------+------------------------------------+-------------------------------------------------+
+| DEFAULT               | verbose                            | True                                            |
+| DEFAULT               | nova_url                           | http://controller:8774/v2                       |
+| DEFAULT               | notify_nova_on_port_data_changes   | True                                            |
+| DEFAULT               | notify_nova_on_port_status_changes | True                                            |
+| DEFAULT               | auth_strategy                      | keystone                                        |
+| DEFAULT               | rpc_backend                        | rabbit                                          |
+| DEFAULT               | allow_overlapping_ips              | True                                            |
+| DEFAULT               | service_plugins                    | router                                          |
+| DEFAULT               | core_plugin                        | ml2                                             |
+| keystone_authtoken    | password                           | mk4968small23buggidntpass                       |
+| keystone_authtoken    | username                           | neutron                                         |
+| keystone_authtoken    | project_name                       | service                                         |
+| keystone_authtoken    | user_domain_id                     | default                                         |
+| keystone_authtoken    | project_domain_id                  | default                                         |
+| keystone_authtoken    | auth_plugin                        | password                                        |
+| keystone_authtoken    | auth_url                           | http://controller:35357                         |
+| keystone_authtoken    | auth_uri                           | http://controller:5000                          |
+| database              | connection                         | mysql://neutron:sleestack191@controller/neutron |
+| nova                  | password                           | mk4968small23buggidntpass                       |
+| nova                  | username                           | nova                                            |
+| nova                  | project_name                       | service                                         |
+| nova                  | region_name                        | RegionOne                                       |
+| nova                  | user_domain_id                     | default                                         |
+| nova                  | project_domain_id                  | default                                         |
+| nova                  | auth_plugin                        | password                                        |
+| nova                  | auth_url                           | http://controller:35357                         |
+| oslo_concurrency      | lock_path                          | /var/lib/neutron/tmp                            |
+| oslo_messaging_rabbit | rabbit_password                    | open.g00dke232                                  |
+| oslo_messaging_rabbit | rabbit_userid                      | openstack                                       |
+| oslo_messaging_rabbit | rabbit_host                        | controller                                      |
++-----------------------+------------------------------------+-------------------------------------------------+
+CONFIGURE .INI FILES
++---------------------+--------------------------+-----------------------------------------------------+
+| dhcp_agent: Section | Key                      | Value                                               |
++---------------------+--------------------------+-----------------------------------------------------+
+| DEFAULT             | interface_driver         | neutron.agent.linux.interface.BridgeInterfaceDriver |
+| DEFAULT             | dhcp_driver              | neutron.agent.linux.dhcp.Dnsmasq                    |
+| DEFAULT             | enable_isolated_metadata | True                                                |
+| DEFAULT             | verbose                  | True                                                |
+| DEFAULT             | dnsmasq_config_file      | /etc/neutron/dnsmasq-neutron.conf                   |
++---------------------+--------------------------+-----------------------------------------------------+
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linuxbridge_agent: Section | Key                         | Value                                                        |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linux_bridge               | physical_interface_mappings | public:enp3s0                                                |
+| vxlan                      | enable_vxlan                | True                                                         |
+| vxlan                      | local_ip                    | 172.22.10.99                                                 |
+| vxlan                      | l2_population               | True                                                         |
+| agent                      | prevent_arp_spoofing        | True                                                         |
+| securitygroup              | enable_security_group       | True                                                         |
+| securitygroup              | firewall_driver             | neutron.agent.linux.iptables_firewall.IptablesFirewallDriver |
++----------------------------+-----------------------------+--------------------------------------------------------------+
++-------------------+--------------------------+------------------------------------------------------+
+| l3_agent: Section | Key                      | Value                                                |
++-------------------+--------------------------+------------------------------------------------------+
+| DEFAULT           | interface_driver         |  neutron.agent.linux.interface.BridgeInterfaceDriver |
+| DEFAULT           | external_network_bridge  |                                                      |
+| DEFAULT           | verbose                  |  True                                                |
++-------------------+--------------------------+------------------------------------------------------+
++-------------------+----------------------+--------------------------+
+| ml2_conf: Section | Key                  | Value                    |
++-------------------+----------------------+--------------------------+
+| ml2               | extension_drivers    | port_security            |
+| ml2               | mechanism_drivers    | linuxbridge,l2population |
+| ml2               | type_drivers         | flat,vlan,vxlan          |
+| ml2               | tenant_network_types | vxlan                    |
+| ml2_type_flat     | flat_networks        | public                   |
+| ml2_type_vxlan    | vni_ranges           | 1:1000                   |
+| securitygroup     | enable_ipset         | True                     |
++-------------------+----------------------+--------------------------+
+
++---------------+------------------------------+---------------------------+
+| nova: Section | Key                          | Value                     |
++---------------+------------------------------+---------------------------+
+| neutron       | metadata_proxy_shared_secret | sekritsqsnuts             |
+| neutron       | service_metadata_proxy       | True                      |
+| neutron       | password                     | mk4968small23buggidntpass |
+| neutron       | username                     | neutron                   |
+| neutron       | project_name                 | service                   |
+| neutron       | region_name                  | RegionOne                 |
+| neutron       | user_domain_id               | default                   |
+| neutron       | project_domain_id            | default                   |
+| neutron       | auth_plugin                  | password                  |
+| neutron       | auth_url                     | http://controller:35357   |
+| neutron       | url                          | http://controller:9696    |
++---------------+------------------------------+---------------------------+
+
+
+IMPORTANT
+Create and edit the /etc/neutron/dnsmasq-neutron.conf 
+file to enable the DHCP MTU option (26) and configure it to 1450 bytes:
+dhcp-option-force=26,1450
+
+====
+FINISH CONTROLLER CONTROLLER CONTROLLER CONTROLLER CONTROLLER 
+Configure Compute to use Networking
+NOW back to the root page
+http://docs.openstack.org/liberty/install-guide-rdo/neutron-controller-install.html
+====
+
+SAME FOR COMPUTE AND CONTROLLER
++-------------------------+------------------------------+---------------------------+
+| metadata_agent: Section | Key                          | Value                     |
++-------------------------+------------------------------+---------------------------+
+| DEFAULT                 | verbose                      | True                      |
+| DEFAULT                 | metadata_proxy_shared_secret | sekritsqsnuts             |
+| DEFAULT                 | nova_metadata_ip             | controller                |
+| DEFAULT                 | password                     | mk4968small23buggidntpass |
+| DEFAULT                 | username                     | neutron                   |
+| DEFAULT                 | project_name                 | service                   |
+| DEFAULT                 | user_domain_id               | default                   |
+| DEFAULT                 | project_domain_id            | default                   |
+| DEFAULT                 | auth_plugin                  | password                  |
+| DEFAULT                 | auth_region                  | RegionOne                 |
+| DEFAULT                 | auth_url                     | http://controller:35357   |
+| DEFAULT                 | auth_uri                     | http://controller:5000    |
++-------------------------+------------------------------+---------------------------+
+
+SAME FOR COMPUTE AND CONTROLLER
++-----------------------+-------------------------------+----------------------------------------------------------+
+| nova: Section         | Key                           | Value                                                    |
++-----------------------+-------------------------------+----------------------------------------------------------+
+| neutron               | metadata_proxy_shared_secret  | sekritsqsnuts                                            |
+| neutron               | service_metadata_proxy        | True                                                     |
+| neutron               | password                      | mk4968small23buggidntpass                                |
+| neutron               | username                      | neutron                                                  |
+| neutron               | project_name                  | service                                                  |
+| neutron               | region_name                   | RegionOne                                                |
+| neutron               | user_domain_id                | default                                                  |
+| neutron               | project_domain_id             | default                                                  |
+| neutron               | auth_plugin                   | password                                                 |
+| neutron               | auth_url                      | http://controller:35357                                  |
+| neutron               | url                           | http://controller:9696                                   |
++-----------------------+-------------------------------+----------------------------------------------------------+
+
+====
+Finalize installation
+====
+
+
+ln -s /etc/neutron/plugins/ml2/ml2_conf.ini /etc/neutron/plugin.ini
+
+
+su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf \
+  --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron
+Runs various upgrades.  Several lines of text.  Then...
+"Ok"
+
+systemctl restart openstack-nova-api.service
+
+systemctl enable neutron-server.service \
+  neutron-linuxbridge-agent.service neutron-dhcp-agent.service \
+  neutron-metadata-agent.service
+systemctl start neutron-server.service \
+  neutron-linuxbridge-agent.service neutron-dhcp-agent.service \
+  neutron-metadata-agent.service
+  
+
+systemctl enable neutron-l3-agent.service
+systemctl start neutron-l3-agent.service
+
+
+========
+START CONTROLLER  CONTROLLER  CONTROLLER  CONTROLLER  
+Install and configure Compute node
+HERE WE ONLY DO THE THINGS THAT ARE DIFFERENT.  ONLY THE PART
+BEFORE NETWORKS OPTIONS 1 AND 2 ARE NEEDED.   THEN RESTART AND 
+MOVE ON TO VERIFY OPERATION
+========
+http://docs.openstack.org/liberty/install-guide-rdo/neutron-compute-install.html
+
+FOR CONTROLLER
+yum install openstack-neutron openstack-neutron-ml2 \
+  openstack-neutron-linuxbridge python-neutronclient ebtables ipset -y
+  
+FOR COMPUTE (THIS PART)  so it's done.
+yum install openstack-neutron openstack-neutron-linuxbridge ebtables ipset
+
+All we really do here is add to a .conf file and restart.
+====
+Configure the common component and Option 2 networking.
+====
+
+BEFORE
+[root@maersk src]# ./pluto.py show -p /etc neutron  
++-----------------------+------------------------------------+---------------------------+
+| neutron: Section      | Key                                | Value                     |
++-----------------------+------------------------------------+---------------------------+
+| DEFAULT               | verbose                            | True                      |
+| DEFAULT               | nova_url                           | http://controller:8774/v2 |
+| DEFAULT               | notify_nova_on_port_data_changes   | True                      |
+| DEFAULT               | notify_nova_on_port_status_changes | True                      |
+| DEFAULT               | auth_strategy                      | keystone                  |
+| DEFAULT               | rpc_backend                        | rabbit                    |
+| DEFAULT               | allow_overlapping_ips              | True                      |
+| DEFAULT               | service_plugins                    | router                    |
+| DEFAULT               | core_plugin                        | ml2                       |
+| nova                  | password                           | mk4968small23buggidntpass |
+| nova                  | username                           | nova                      |
+| nova                  | project_name                       | service                   |
+| nova                  | region_name                        | RegionOne                 |
+| nova                  | user_domain_id                     | default                   |
+| nova                  | project_domain_id                  | default                   |
+| nova                  | auth_plugin                        | password                  |
+| nova                  | auth_url                           | http://controller:35357   |
+| oslo_concurrency      | lock_path                          | /var/lib/neutron/tmp      |
+| oslo_messaging_rabbit | rabbit_password                    | open.g00dke232            |
+| oslo_messaging_rabbit | rabbit_userid                      | openstack                 |
+| oslo_messaging_rabbit | rabbit_host                        | controller                |
++-----------------------+------------------------------------+---------------------------+
+AFTER
+
++-----------------------+------------------------------------+---------------------------+
+| neutron: Section      | Key                                | Value                     |
++-----------------------+------------------------------------+---------------------------+
+| DEFAULT               | verbose                            | True                      |
+| DEFAULT               | nova_url                           | http://controller:8774/v2 |
+| DEFAULT               | notify_nova_on_port_data_changes   | True                      |
+| DEFAULT               | notify_nova_on_port_status_changes | True                      |
+| DEFAULT               | auth_strategy                      | keystone                  |
+| DEFAULT               | rpc_backend                        | rabbit                    |
+| DEFAULT               | allow_overlapping_ips              | True                      |
+| DEFAULT               | service_plugins                    | router                    |
+| DEFAULT               | core_plugin                        | ml2                       |
+| keystone_authtoken    | password                           | mk4968small23buggidntpass |
+| keystone_authtoken    | username                           | neutron                   |
+| keystone_authtoken    | project_name                       | service                   |
+| keystone_authtoken    | user_domain_id                     | default                   |
+| keystone_authtoken    | project_domain_id                  | default                   |
+| keystone_authtoken    | auth_plugin                        | password                  |
+| keystone_authtoken    | auth_url                           | http://controller:35357   |
+| keystone_authtoken    | auth_uri                           | http://controller:5000    |
+| nova                  | password                           | mk4968small23buggidntpass |
+| nova                  | username                           | nova                      |
+| nova                  | project_name                       | service                   |
+| nova                  | region_name                        | RegionOne                 |
+| nova                  | user_domain_id                     | default                   |
+| nova                  | project_domain_id                  | default                   |
+| nova                  | auth_plugin                        | password                  |
+| nova                  | auth_url                           | http://controller:35357   |
+| oslo_concurrency      | lock_path                          | /var/lib/neutron/tmp      |
+| oslo_messaging_rabbit | rabbit_password                    | open.g00dke232            |
+| oslo_messaging_rabbit | rabbit_userid                      | openstack                 |
+| oslo_messaging_rabbit | rabbit_host                        | controller                |
++-----------------------+------------------------------------+---------------------------+
+
+BEFORE
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linuxbridge_agent: Section | Key                         | Value                                                        |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linux_bridge               | physical_interface_mappings | public:enp3s0                                                |
+| vxlan                      | enable_vxlan                | True                                                         |
+| vxlan                      | local_ip                    | 172.22.10.99                                                 |
+| vxlan                      | l2_population               | True                                                         |
+| agent                      | prevent_arp_spoofing        | True                                                         |
+| securitygroup              | enable_security_group       | True                                                         |
+| securitygroup              | firewall_driver             | neutron.agent.linux.iptables_firewall.IptablesFirewallDriver |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+AFTER
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linuxbridge_agent: Section | Key                         | Value                                                        |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+| linux_bridge               | physical_interface_mappings | public:enp3s0                                                |
+| vxlan                      | enable_vxlan                | True                                                         |
+| vxlan                      | local_ip                    | 172.22.10.99                                                 |
+| vxlan                      | l2_population               | True                                                         |
+| agent                      | prevent_arp_spoofing        | True                                                         |
+| securitygroup              | enable_security_group       | True                                                         |
+| securitygroup              | firewall_driver             | neutron.agent.linux.iptables_firewall.IptablesFirewallDriver |
++----------------------------+-----------------------------+--------------------------------------------------------------+
+
+
+====
+Configure Compute to use Networking
+SAME AS ABOVE
+====
+
+Interesting.  No Database Syncing.
+
+====
+FInalize
+====
+
+systemctl restart openstack-nova-compute.service
+
+systemctl enable neutron-linuxbridge-agent.service
+systemctl start neutron-linuxbridge-agent.service
+
+
+========
+Verify operation
+========
+
+[root@maersk src]# source admin-openrc.sh 
+[root@maersk src]# neutron ext-list
++-----------------------+-----------------------------------------------+
+| alias                 | name                                          |
++-----------------------+-----------------------------------------------+
+| dns-integration       | DNS Integration                               |
+| ext-gw-mode           | Neutron L3 Configurable external gateway mode |
+| binding               | Port Binding                                  |
+| agent                 | agent                                         |
+| subnet_allocation     | Subnet Allocation                             |
+| l3_agent_scheduler    | L3 Agent Scheduler                            |
+| external-net          | Neutron external network                      |
+| flavors               | Neutron Service Flavors                       |
+| net-mtu               | Network MTU                                   |
+| quotas                | Quota management support                      |
+| l3-ha                 | HA Router extension                           |
+| provider              | Provider Network                              |
+| multi-provider        | Multi Provider Network                        |
+| extraroute            | Neutron Extra Route                           |
+| router                | Neutron L3 Router                             |
+| extra_dhcp_opt        | Neutron Extra DHCP opts                       |
+| security-group        | security-group                                |
+| dhcp_agent_scheduler  | DHCP Agent Scheduler                          |
+| rbac-policies         | RBAC Policies                                 |
+| port-security         | Port Security                                 |
+| allowed-address-pairs | Allowed Address Pairs                         |
+| dvr                   | Distributed Virtual Router                    |
++-----------------------+-----------------------------------------------+
+
+Networking Option 2: Self-service networks
+
+[root@maersk src]# neutron agent-list
++--------------------------------------+--------------------+--------+-------+----------------+---------------------------+
+| id                                   | agent_type         | host   | alive | admin_state_up | binary                    |
++--------------------------------------+--------------------+--------+-------+----------------+---------------------------+
+| 825f5aef-8270-48e5-8c18-0d4f6bd25f3c | DHCP agent         | maersk | :-)   | True           | neutron-dhcp-agent        |
+| a419c50c-d564-4e91-9d83-7206cc77de79 | L3 agent           | maersk | :-)   | True           | neutron-l3-agent          |
+| f80db96c-6284-4c24-92c4-2b042fa4af7a | Linux bridge agent | maersk | :-)   | True           | neutron-linuxbridge-agent |
++--------------------------------------+--------------------+--------+-------+----------------+---------------------------+
+
+Should be....
+
+$ neutron agent-list
++--------------------------------------+--------------------+------------+-------+----------------+---------------------------+
+| id                                   | agent_type         | host       | alive | admin_state_up | binary                    |
++--------------------------------------+--------------------+------------+-------+----------------+---------------------------+
+| 08905043-5010-4b87-bba5-aedb1956e27a | Linux bridge agent | compute1   | :-)   | True           | neutron-linuxbridge-agent |
+| 27eee952-a748-467b-bf71-941e89846a92 | Linux bridge agent | controller | :-)   | True           | neutron-linuxbridge-agent |
+| 830344ff-dc36-4956-84f4-067af667a0dc | L3 agent           | controller | :-)   | True           | neutron-l3-agent          |
+| dd3644c9-1a3a-435a-9282-eb306b4b0391 | DHCP agent         | controller | :-)   | True           | neutron-dhcp-agent        |
+| f49a4b81-afd6-4b3d-b923-66c8f0517099 | Metadata agent     | controller | :-)   | True           | neutron-metadata-agent    |
++--------------------------------------+--------------------+------------+-------+----------------+---------------------------+
+
+The output should indicate four agents on the controller node and 
+one agent on each compute node.
+
+
+
+
+
+
+
+
+========================================================================
+Next steps
+========================================================================
+
+Your OpenStack environment now includes the core components necessary to launch a basic instance. Y
+ou can Launch an instance or add more OpenStack services to your environment.
+
+========================================================================
+Launch an instance
+========================================================================
+
+http://docs.openstack.org/liberty/install-guide-rdo/launch-instance.html#launch-instance
+
+
+====
+Create virtual networks
+====
+
+The Private project network (provided for only by Option 2) creates completely separate 
+virtual networks.  To access, you must use a floating IP.
+You must create the public provider network before the private project network.
+
+====
+Create the public network
+====
+
+source admin
+
+neutron net-create public --shared --provider:physical_network public --provider:network_type flat
+
+[root@maersk src]# neutron net-create public --shared --provider:physical_network public \
+>   --provider:network_type flat
+Created a new network:
++---------------------------+--------------------------------------+
+| Field                     | Value                                |
++---------------------------+--------------------------------------+
+| admin_state_up            | True                                 |
+| id                        | 7e095c3c-8730-49d2-8bf5-d4a27e251215 |
+| mtu                       | 0                                    |
+| name                      | public                               |
+| provider:network_type     | flat                                 |
+| provider:physical_network | public                               |
+| provider:segmentation_id  |                                      |
+| router:external           | False                                |
+| shared                    | True                                 |
+| status                    | ACTIVE                               |
+| subnets                   |                                      |
+| tenant_id                 | fdf3f98a9b0c4e9e94603d8a84ea41a8     |
++---------------------------+--------------------------------------+
+
+The --shared option allows all projects to use the virtual network.
+The --provider:physical_network public and --provider:network_type flat options connect the flat 
+virtual network to the flat (native/untagged) public physical network on the eth1 interface on the 
+host using information from the following files:
+
+MODIFY THE FOLLOWING FILE ml2_conf.ini
+vi /etc/neutron/plugins/ml2/ml2_conf.ini
+
+[ml2_type_flat]
+# ADDED FOR LIBERTY INSTALL
+flat_networks = public
+
+MODIFY THE FOLLOWING FILE linuxbridge_agent.ini
+vi /etc/neutron/plugins/ml2/linuxbridge_agent.ini
+
+[linux_bridge]
+# ADDED FOR LIBERTY INSTALL
+# EXAMPLE SAYS
+physical_interface_mappings = public:eth1
+# BUT ON MY SYSTEM IFCONFIG SAYS enp3s0 ???? NOT SURE, USING EXAMPLE
+# physical_interface_mappings = public:enp3s0
+
+--- Create a subnet on the network:
+
+Replace START_IP_ADDRESS and END_IP_ADDRESS with the first and last IP address of the range within 
+the subnet that you want to allocate for instances. This range must not include any 
+existing active IP addresses.
+
+Example
+neutron subnet-create public 203.0.113.0/24 --name public \
+  --allocation-pool start=203.0.113.101,end=203.0.113.200 \
+  --dns-nameserver 8.8.4.4 --gateway 203.0.113.1  
+  
+External net created for Kilo.
+neutron subnet-create ext-net 172.22.10.0/24 --name ext-subnet \
+  --allocation-pool start=172.22.10.10,end=172.22.10.49 \
+  --disable-dhcp --gateway 172.22.10.1
+  
+So we will do this.  I'm pretty sure this is supposed to corruspond with the 
+physical network as defined on my ATT router.  See /etc/resolv.conf and ifcfg-enp3s0
+  
+[root@maersk src]# cat /etc/resolv.conf 
+; generated by /usr/sbin/dhclient-script
+search attlocal.net
+nameserver 172.22.10.254
+
+cat ifcfg-enp3s0
+GATEWAY=172.22.10.254
+DNS1=172.22.10.254
+
+neutron subnet-create public 172.22.10.0/24 --name public \
+   --allocation-pool start=172.22.10.10,end=172.22.10.90 \
+   --dns-nameserver 172.22.10.254 --gateway 172.22.10.254
+
+[root@maersk src]# neutron subnet-create public 172.22.10.0/24 --name public \
+>   --allocation-pool start=172.22.10.10,end=172.22.10.90 \
+>   --dns-nameserver 172.22.10.254 --gateway 172.22.10.254
+Created a new subnet:
++-------------------+--------------------------------------------------+
+| Field             | Value                                            |
++-------------------+--------------------------------------------------+
+| allocation_pools  | {"start": "172.22.10.10", "end": "172.22.10.90"} |
+| cidr              | 172.22.10.0/24                                   |
+| dns_nameservers   | 172.22.10.254                                    |
+| enable_dhcp       | True                                             |
+| gateway_ip        | 172.22.10.254                                    |
+| host_routes       |                                                  |
+| id                | ede5a47f-ddc9-4748-89ab-b230213a4695             |
+| ip_version        | 4                                                |
+| ipv6_address_mode |                                                  |
+| ipv6_ra_mode      |                                                  |
+| name              | public                                           |
+| network_id        | 7e095c3c-8730-49d2-8bf5-d4a27e251215             |
+| subnetpool_id     |                                                  |
+| tenant_id         | fdf3f98a9b0c4e9e94603d8a84ea41a8                 |
++-------------------+--------------------------------------------------+
+
+====
+Create the private project network
+====
+http://docs.openstack.org/liberty/install-guide-rdo/launch-instance-networks-private.html
+
+
+source demo-openrc.sh
+
+[root@maersk src]# neutron net-create private
+Created a new network:
++-----------------+--------------------------------------+
+| Field           | Value                                |
++-----------------+--------------------------------------+
+| admin_state_up  | True                                 |
+| id              | c47a01a5-6de3-4613-9874-e32b0d3b43a7 |
+| mtu             | 0                                    |
+| name            | private                              |
+| router:external | False                                |
+| shared          | False                                |
+| status          | ACTIVE                               |
+| subnets         |                                      |
+| tenant_id       | 7813be77b1de4196b1c6b77006afa21c     |
++-----------------+--------------------------------------+
+
+
+MODIFY THIS FILE  ml2_conf.ini
+vi /etc/neutron/plugins/ml2/ml2_conf.ini
+
+[ml2]
+# ADDED FOR LIBERTY INSTALL
+tenant_network_types = vxlan
+
+[ml2_type_vxlan]
+# ADDED FOR LIBERTY INSTALL
+vni_ranges = 1:1000
+
+neutron subnet-create private 192.168.10.0/24 \
+    --name private --dns-nameserver 172.22.10.254 --gateway 192.168.10.1
+
+[root@maersk src]# neutron subnet-create private 192.168.10.0/24 --name private --dns-nameserver 172.22.10.254 --gateway 192.168.10.1
+Created a new subnet:
++-------------------+----------------------------------------------------+
+| Field             | Value                                              |
++-------------------+----------------------------------------------------+
+| allocation_pools  | {"start": "192.168.10.2", "end": "192.168.10.254"} |
+| cidr              | 192.168.10.0/24                                    |
+| dns_nameservers   | 172.22.10.254                                      |
+| enable_dhcp       | True                                               |
+| gateway_ip        | 192.168.10.1                                       |
+| host_routes       |                                                    |
+| id                | 2d23795f-8fe0-46d8-81a0-811def3b5305               |
+| ip_version        | 4                                                  |
+| ipv6_address_mode |                                                    |
+| ipv6_ra_mode      |                                                    |
+| name              | private                                            |
+| network_id        | c47a01a5-6de3-4613-9874-e32b0d3b43a7               |
+| subnetpool_id     |                                                    |
+| tenant_id         | 7813be77b1de4196b1c6b77006afa21c                   |
++-------------------+----------------------------------------------------+
+
+====
+Create a router
+====
+
+Private project networks connect to public provider networks using a virtual router. 
+Each router contains an interface to at least one private project network and a gateway 
+on a public provider network.
+
+[root@maersk src]# source admin-openrc.sh
+[root@maersk src]# neutron net-update public --router:external
+Updated network: public
+[root@maersk src]# source demo-openrc.sh 
+[root@maersk src]# neutron router-create router
+Created a new router:
++-----------------------+--------------------------------------+
+| Field                 | Value                                |
++-----------------------+--------------------------------------+
+| admin_state_up        | True                                 |
+| external_gateway_info |                                      |
+| id                    | fc389a3b-5f8b-4b9a-96d5-3550c40a7c06 |
+| name                  | router                               |
+| routes                |                                      |
+| status                | ACTIVE                               |
+| tenant_id             | 7813be77b1de4196b1c6b77006afa21c     |
++-----------------------+--------------------------------------+
+[root@maersk src]# neutron router-interface-add router private
+Added interface 80335734-2d99-4522-80f7-8ed1588d9083 to router router.
+[root@maersk src]# neutron router-gateway-set router public
+Set gateway for router router
+[root@maersk src]# 
+
+====
+Verify Operation
+====
+
+[root@maersk src]# source admin-openrc.sh 
+
+List network namespaces. You should see one qrouter namespace and two qdhcp namespaces.
+
+[root@maersk src]# ip netns
+qrouter-fc389a3b-5f8b-4b9a-96d5-3550c40a7c06 (id: 2)
+qdhcp-c47a01a5-6de3-4613-9874-e32b0d3b43a7 (id: 1)
+qdhcp-7e095c3c-8730-49d2-8bf5-d4a27e251215 (id: 0)
+
+List ports on the router to determine the gateway IP address on the public provider network:
+
+[root@maersk src]# neutron router-port-list router
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                           |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| 80335734-2d99-4522-80f7-8ed1588d9083 |      | fa:16:3e:ba:92:ba | {"subnet_id": "2d23795f-8fe0-46d8-81a0-811def3b5305", "ip_address": "192.168.10.1"} |
+| b1fb69dc-adcc-4a80-8782-302924d10684 |      | fa:16:3e:d2:d1:a5 | {"subnet_id": "ede5a47f-ddc9-4748-89ab-b230213a4695", "ip_address": "172.22.10.11"} |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+
+Ping the Public half of the router
+
+Example
+ping -c 4 203.0.113.102
+
+ping -c 4 172.22.10.11
+
+
+
+
+====
+Delete all of the obove
+====
+
+
+neutron router-gateway-clear "Router"(check name with neutron router-list)
+neutron router-interface-delete "Router" "SubNet"
+neutron router-delete "Router"
+neutron subnet-delete "SubNet"
+neutron net-delete "Net"
+
+[root@maersk src]# neutron router-gateway-clear router  
+Removed gateway from router router
+[root@maersk src]# neutron router-interface-delete router  private  
+Removed interface from router router.
+[root@maersk src]# neutron router-interface-delete router  public  
+Router fc389a3b-5f8b-4b9a-96d5-3550c40a7c06 has no interface on subnet ede5a47f-ddc9-4748-89ab-b230213a4695
+[root@maersk src]# neutron router-delete router  
+Deleted router: router
+[root@maersk src]# neutron subnet-delete private  
+Deleted subnet: private
+[root@maersk src]# neutron subnet-delete public  
+Deleted subnet: public
+[root@maersk src]# neutron net-delete private  
+Deleted network: private
+[root@maersk src]# neutron net-delete public  
+Deleted network: public
+
+
+
++-----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                                                                                                    |
++-----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | True                                                                                                                                                                                     |
+| external_gateway_info | {"network_id": "023c94f6-d792-479e-b718-035098695a0d", 
+               "enable_snat": true, "external_fixed_ips": 
+               [{"subnet_id": "3340fc39-bb62-43fc-8438-392b7ec23094", "ip_address": "172.22.10.11"}]} |
+| id                    | 669b05bb-e58b-4a5f-9139-bd5ad08d7139                                                                                                                                                     |
+| name                  | router                                                                                                                                                                                   |
+| routes                |                                                                                                                                                                                          |
+| status                | ACTIVE                                                                                                                                                                                   |
+| tenant_id             | 7813be77b1de4196b1c6b77006afa21c                                                                                                                                                         |
++-----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+
+
+
+
+
+
+
+[root@maersk src]# source admin-openrc.sh
+[root@maersk src]# ip netns
+qrouter-669b05bb-e58b-4a5f-9139-bd5ad08d7139 (id: 4)
+qdhcp-5ee448e5-3d0b-48cd-85c5-a09bf7cac3ed (id: 3)
+qdhcp-023c94f6-d792-479e-b718-035098695a0d (id: 2)
+qdhcp-6e444422-639b-4632-9c39-f3f2ec0518a7 (id: 1)
+qdhcp-2b853a39-c726-4abd-a8d5-e1f7e284d7c6 (id: 0)
+[root@maersk src]# neutron router-port-list router
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| id                                   | name | mac_address       | fixed_ips                                                                           |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+| 333774cf-8faf-41c4-98fd-3cf794730258 |      | fa:16:3e:84:cf:09 | {"subnet_id": "c80df59d-42e2-4c56-8681-ee49a1a77c2c", "ip_address": "192.168.10.1"} |
+| 80172f12-55ff-4eab-bc5f-ad527c296e2e |      | fa:16:3e:79:16:cf | {"subnet_id": "3340fc39-bb62-43fc-8438-392b7ec23094", "ip_address": "172.22.10.11"} |
++--------------------------------------+------+-------------------+-------------------------------------------------------------------------------------+
+[root@maersk src]# ping 172.22.10.11
+PING 172.22.10.11 (172.22.10.11) 56(84) bytes of data.
+From 172.22.10.99 icmp_seq=1 Destination Host Unreachable
+From 172.22.10.99 icmp_seq=2 Destination Host Unreachable
+From 172.22.10.99 icmp_seq=3 Destination Host Unreachable
+From 172.22.10.99 icmp_seq=4 Destination Host Unreachable
+
+
+
+
+ Internal net created like this for Kilo
+  
+  neutron subnet-create demo-net 192.168.1.0/24 \
+  --name demo-subnet --dns-nameserver 172.22.10.254 --gateway 192.168.1.1
+  
+
+====
+BACK TO LAUNCHING AN INSTANCE
+Generate a key pair¶
+====
+
+
+[root@maersk src]# source demo-openrc.sh 
+[root@maersk src]# ssh-keygen -q -N ""
+Enter file in which to save the key (/root/.ssh/id_rsa):
+nova keypair-add --pub-key ~/.ssh/id_rsa.pub mykey
+
+[root@maersk src]# nova keypair-list
++-------+-------------------------------------------------+
+| Name  | Fingerprint                                     |
++-------+-------------------------------------------------+
+| mykey | ae:34:b7:25:45:19:e8:08:39:ac:b8:f8:5e:4f:69:29 |
++-------+-------------------------------------------------+
+
+====
+Add security group rules¶
+====
+
+By default, the default security group applies to all instances and includes firewall 
+rules that deny remote access to instances. For Linux images such as CirrOS, we recommend 
+allowing at least ICMP (ping) and secure shell (SSH).
+
+OH   IS THIS WHY I CAN'T PING THE ROUTER???
+
+[root@maersk src]# nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
++-------------+-----------+---------+-----------+--------------+
+| IP Protocol | From Port | To Port | IP Range  | Source Group |
++-------------+-----------+---------+-----------+--------------+
+| icmp        | -1        | -1      | 0.0.0.0/0 |              |
++-------------+-----------+---------+-----------+--------------+
+[root@maersk src]# nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
++-------------+-----------+---------+-----------+--------------+
+| IP Protocol | From Port | To Port | IP Range  | Source Group |
++-------------+-----------+---------+-----------+--------------+
+| tcp         | 22        | 22      | 0.0.0.0/0 |              |
++-------------+-----------+---------+-----------+--------------+
+
+
+====
+Launch an instance
+====
+
+Launch an instance on the public network
+
+[root@maersk src]# neutron net-show public  
++-----------------+--------------------------------------+
+| Field           | Value                                |
++-----------------+--------------------------------------+
+| admin_state_up  | True                                 |
+| id              | 023c94f6-d792-479e-b718-035098695a0d |
+| mtu             | 0                                    |
+| name            | public                               |
+| router:external | True                                 |
+| shared          | True                                 |
+| status          | ACTIVE                               |
+| subnets         | 3340fc39-bb62-43fc-8438-392b7ec23094 |
+| tenant_id       | fdf3f98a9b0c4e9e94603d8a84ea41a8     |
++-----------------+--------------------------------------+
+[root@maersk src]# nova secgroup-list
++--------------------------------------+---------+------------------------+
+| Id                                   | Name    | Description            |
++--------------------------------------+---------+------------------------+
+| 88e08315-aa36-417c-b175-aee7f7b53e12 | default | Default security group |
++--------------------------------------+---------+------------------------+
+[root@maersk src]# nova net-list 
++--------------------------------------+---------+------+
+| ID                                   | Label   | CIDR |
++--------------------------------------+---------+------+
+| 5ee448e5-3d0b-48cd-85c5-a09bf7cac3ed | private | None |
+| 023c94f6-d792-479e-b718-035098695a0d | public  | None |
++--------------------------------------+---------+------+
+
+EXAMPLE 
+
+nova boot --flavor m1.tiny --image cirros --nic net-id=PUBLIC_NET_ID \
+  --security-group default --key-name mykey public-instance
+  
+PUBLIC
+nova boot --flavor m1.tiny --image cirros --nic net-id=023c94f6-d792-479e-b718-035098695a0d \
+  --security-group default --key-name mykey public-instance
+  
+FAILED NETWORK SETUP   SEE NEUTRON LOGS
+
+PRIVATE
+nova boot --flavor m1.tiny --image cirros --nic net-id=5ee448e5-3d0b-48cd-85c5-a09bf7cac3ed \
+  --security-group default --key-name mykey public-instance
+  
+NEED TO SETUP NEUTORN AGAIN NOW THAT IT'S CONF FILE IS CORRECT!!!
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+

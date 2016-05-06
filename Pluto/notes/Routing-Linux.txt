@@ -1,0 +1,31 @@
+
+
+Routing Tables for Dummies??
+http://www.thegeekstuff.com/2012/04/ip-routing-intro/
+
+Simply put
+IP routing involves forwarding of IP datagrams. Its a simple process in which the host 
+sends the IP datagram directly to the destination if the destination host is connected. 
+For example, through a point to point link or through a shared network. If the destination 
+host is not directly connected then the host sends the IP datagram to the default router 
+and lets the router decide where to send the IP datagram further.
+
+
+
+$ netstat -rn
+Kernel IP routing table
+Destination  Gateway         Genmask         Flags   MSS Window  irtt Iface
+192.168.2.0  0.0.0.0         255.255.255.0   U         0 0        0    eth0
+169.254.0.0  0.0.0.0         255.255.0.0     U         0 0        0    eth0
+
+#Anything on eth0, forward to router gateway
+0.0.0.0      192.168.2.1     0.0.0.0         UG        0 0        0    eth0
+
+
+
+
+
+How to change some important routes
+http://linux-ip.net/html/routing-tables.html
+
+

@@ -1,0 +1,427 @@
+Installing Cinder Liberty
+11 March 2016
+http://docs.openstack.org/liberty/install-guide-rdo/cinder.html
+AND
+Install and configure a storage node
+http://docs.openstack.org/liberty/install-guide-rdo/cinder-storage-install.html
+
+
+
+I have allocated a bland 4TB drive.
+The machine currently has 2 4TB Drives, one holds the system with Openstack and the other will be Cinder
+
+====
+Setup DB
+]]]]
+
+mysql -u root -p
+openg00dle232
+
+Create the cinder database:
+
+CREATE DATABASE cinder;
+GRANT ALL PRIVILEGES ON cinder.* TO 'cinder'@'localhost' IDENTIFIED BY 'sleestack191';
+GRANT ALL PRIVILEGES ON cinder.* TO 'cinder'@'%' IDENTIFIED BY 'sleestack191';
+
+====
+Setup Identity
+====
+
+openstack user create --domain default --password-prompt cinder
+mk4968small23buggidntpass
+[sleestack@maersk src]$ source admin-openrc.sh 
+[sleestack@maersk src]$ openstack user create --domain default --password-prompt cinder
+User Password:
+Repeat User Password:
++-----------+----------------------------------+
+| Field     | Value                            |
++-----------+----------------------------------+
+| domain_id | default                          |
+| enabled   | True                             |
+| id        | ccba2819dc434112926603f7237be133 |
+| name      | cinder                           |
++-----------+----------------------------------+
+
+
+
+openstack role add --project service --user cinder admin
+
+The Block Storage services requires two service entities.
+
+Create Two Services
+
+[sleestack@maersk src]$ openstack service create --name cinder   --description "OpenStack Block Storage" volume
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description | OpenStack Block Storage          |
+| enabled     | True                             |
+| id          | dd26f192fa0c47b089b148a0b8829e9d |
+| name        | cinder                           |
+| type        | volume                           |
++-------------+----------------------------------+
+[sleestack@maersk src]$ openstack service create --name cinderv2 --description "OpenStack Block Storage" volumev2
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description | OpenStack Block Storage          |
+| enabled     | True                             |
+| id          | 2c125e5e13504c7593d4920f3e9837ce |
+| name        | cinderv2                         |
+| type        | volumev2                         |
++-------------+----------------------------------+
+
+
+Endpoints
+Crewate Six endpoints, 3 for each service
+
+
+[sleestack@maersk src]$ openstack endpoint create --region RegionOne \
+>   volume public http://controller:8776/v1/%\(tenant_id\)s
++--------------+-----------------------------------------+
+| Field        | Value                                   |
++--------------+-----------------------------------------+
+| enabled      | True                                    |
+| id           | 4711817fe9fb4475a57f4979a4c11016        |
+| interface    | public                                  |
+| region       | RegionOne                               |
+| region_id    | RegionOne                               |
+| service_id   | dd26f192fa0c47b089b148a0b8829e9d        |
+| service_name | cinder                                  |
+| service_type | volume                                  |
+| url          | http://controller:8776/v1/%(tenant_id)s |
++--------------+-----------------------------------------+
+[sleestack@maersk src]$ openstack endpoint create --region RegionOne \
+>   volume internal http://controller:8776/v1/%\(tenant_id\)s
++--------------+-----------------------------------------+
+| Field        | Value                                   |
++--------------+-----------------------------------------+
+| enabled      | True                                    |
+| id           | 80e7f78bb6ff4bcc8f2606d88d1efb09        |
+| interface    | internal                                |
+| region       | RegionOne                               |
+| region_id    | RegionOne                               |
+| service_id   | dd26f192fa0c47b089b148a0b8829e9d        |
+| service_name | cinder                                  |
+| service_type | volume                                  |
+| url          | http://controller:8776/v1/%(tenant_id)s |
++--------------+-----------------------------------------+
+[sleestack@maersk src]$ openstack endpoint create --region RegionOne \
+>   volume admin http://controller:8776/v1/%\(tenant_id\)s
++--------------+-----------------------------------------+
+| Field        | Value                                   |
++--------------+-----------------------------------------+
+| enabled      | True                                    |
+| id           | d9419d409911422687990f8260eff554        |
+| interface    | admin                                   |
+| region       | RegionOne                               |
+| region_id    | RegionOne                               |
+| service_id   | dd26f192fa0c47b089b148a0b8829e9d        |
+| service_name | cinder                                  |
+| service_type | volume                                  |
+| url          | http://controller:8776/v1/%(tenant_id)s |
++--------------+-----------------------------------------+
+[sleestack@maersk src]$ openstack endpoint create --region RegionOne \
+>   volumev2 public http://controller:8776/v2/%\(tenant_id\)s
++--------------+-----------------------------------------+
+| Field        | Value                                   |
++--------------+-----------------------------------------+
+| enabled      | True                                    |
+| id           | 0652d4a83d694d70a66ee2dd7023ccd4        |
+| interface    | public                                  |
+| region       | RegionOne                               |
+| region_id    | RegionOne                               |
+| service_id   | 2c125e5e13504c7593d4920f3e9837ce        |
+| service_name | cinderv2                                |
+| service_type | volumev2                                |
+| url          | http://controller:8776/v2/%(tenant_id)s |
++--------------+-----------------------------------------+
+[sleestack@maersk src]$ openstack endpoint create --region RegionOne \
+>   volumev2 internal http://controller:8776/v2/%\(tenant_id\)s
++--------------+-----------------------------------------+
+| Field        | Value                                   |
++--------------+-----------------------------------------+
+| enabled      | True                                    |
+| id           | 5590b8921c164980b09f485459e8848f        |
+| interface    | internal                                |
+| region       | RegionOne                               |
+| region_id    | RegionOne                               |
+| service_id   | 2c125e5e13504c7593d4920f3e9837ce        |
+| service_name | cinderv2                                |
+| service_type | volumev2                                |
+| url          | http://controller:8776/v2/%(tenant_id)s |
++--------------+-----------------------------------------+
+[sleestack@maersk src]$ openstack endpoint create --region RegionOne \
+>   volumev2 admin http://controller:8776/v2/%\(tenant_id\)s
++--------------+-----------------------------------------+
+| Field        | Value                                   |
++--------------+-----------------------------------------+
+| enabled      | True                                    |
+| id           | 3a6e2ce695b442dcbf8a68073a30ca06        |
+| interface    | admin                                   |
+| region       | RegionOne                               |
+| region_id    | RegionOne                               |
+| service_id   | 2c125e5e13504c7593d4920f3e9837ce        |
+| service_name | cinderv2                                |
+| service_type | volumev2                                |
+| url          | http://controller:8776/v2/%(tenant_id)s |
++--------------+-----------------------------------------+
+[sleestack@maersk src]$ 
+
+
+====
+Install and Config
+====
+
+yum install openstack-cinder python-cinderclient
+
+
+
+BatchFileProcessor Processing merge file: ../batch-files/liberty-cinder-controller-install.txt
+BatchFileProcessor Running installation for: Liberty Cider Controller install
+BatchFileProcessor Updating configuration file: cinder.conf
+BatchFileProcessor Updating configuration file: nova.conf
++-----------------------+-------------------+-----------------------------------------------+
+| cinder: Section       | Key               | Value                                         |
++-----------------------+-------------------+-----------------------------------------------+
+| DEFAULT               | verbose           | True                                          |
+| DEFAULT               | my_ip             | 172.22.10.99                                  |
+| DEFAULT               | auth_strategy     | keystone                                      |
+| DEFAULT               | rpc_backend       | rabbit                                        |
+| database              | connection        | mysql://cinder:sleestack191@controller/cinder |
+| keystone_authtoken    | password          | mk4968small23buggidntpass                     |
+| keystone_authtoken    | username          | cinder                                        |
+| keystone_authtoken    | project_name      | service                                       |
+| keystone_authtoken    | user_domain_id    | default                                       |
+| keystone_authtoken    | project_domain_id | default                                       |
+| keystone_authtoken    | auth_plugin       | password                                      |
+| keystone_authtoken    | auth_url          | http://controller:35357                       |
+| keystone_authtoken    | auth_uri          | http://controller:5000                        |
+| oslo_concurrency      | lock_path         | /var/lib/cinder/tmp                           |
+| oslo_messaging_rabbit | rabbit_password   | open.g00dke232                                |
+| oslo_messaging_rabbit | rabbit_userid     | openstack                                     |
+| oslo_messaging_rabbit | rabbit_host       | controller                                    |
++-----------------------+-------------------+-----------------------------------------------+
++-----------------------+-------------------------------+----------------------------------------------------------+
+| nova: Section         | Key                           | Value                                                    |
++-----------------------+-------------------------------+----------------------------------------------------------+
+| DEFAULT               | verbose                       | True                                                     |
+| DEFAULT               | enabled_apis                  | osapi_compute,metadata                                   |
+| DEFAULT               | firewall_driver               | nova.virt.firewall.NoopFirewallDriver                    |
+| DEFAULT               | linuxnet_interface_driver     | nova.network.linux_net.NeutronLinuxBridgeInterfaceDriver |
+| DEFAULT               | security_group_api            | neutron                                                  |
+| DEFAULT               | network_api_class             | nova.network.neutronv2.api.API                           |
+| DEFAULT               | my_ip                         | 172.22.10.99                                             |
+| DEFAULT               | auth_strategy                 | keystone                                                 |
+| DEFAULT               | rpc_backend                   | rabbit                                                   |
+| cinder                | os_region_name                | RegionOne                                                |
+| database              | connection                    | mysql://nova:sleestack191@controller/nova                |
+| glance                | host                          | controller                                               |
+| keystone_authtoken    | password                      | mk4968small23buggidntpass                                |
+| keystone_authtoken    | username                      | nova                                                     |
+| keystone_authtoken    | project_name                  | service                                                  |
+| keystone_authtoken    | user_domain_id                | default                                                  |
+| keystone_authtoken    | project_domain_id             | default                                                  |
+| keystone_authtoken    | auth_plugin                   | password                                                 |
+| keystone_authtoken    | auth_url                      | http://controller:35357                                  |
+| keystone_authtoken    | auth_uri                      | http://controller:5000                                   |
+| neutron               | metadata_proxy_shared_secret  | sekritsqsnuts                                            |
+| neutron               | service_metadata_proxy        | True                                                     |
+| neutron               | password                      | mk4968small23buggidntpass                                |
+| neutron               | username                      | neutron                                                  |
+| neutron               | project_name                  | service                                                  |
+| neutron               | region_name                   | RegionOne                                                |
+| neutron               | user_domain_id                | default                                                  |
+| neutron               | project_domain_id             | default                                                  |
+| neutron               | auth_plugin                   | password                                                 |
+| neutron               | auth_url                      | http://controller:35357                                  |
+| neutron               | url                           | http://controller:9696                                   |
+| oslo_concurrency      | lock_path                     | /var/lib/nova/tmp                                        |
+| oslo_messaging_rabbit | rabbit_password               | open.g00dke232                                           |
+| oslo_messaging_rabbit | rabbit_userid                 | openstack                                                |
+| oslo_messaging_rabbit | rabbit_host                   | controller                                               |
+| vnc                   | novncproxy_base_url           | http://controller:6080/vnc_auto.html                     |
+| vnc                   | enabled                       | True                                                     |
+| vnc                   | vncserver_proxyclient_address | $my_ip                                                   |
+| vnc                   | vncserver_listen              | 0.0.0.0                                                  |
++-----------------------+-------------------------------+----------------------------------------------------------+
+-------------------------------------------------
+FOLLOW POST CONFIG INSTRUCTIONS to insure conf files are correct.
+Make sure the [keystone_authtoken] section contains only the following.
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = cinder
+password = CINDER_PASS (identity service password)
+
+
+====
+DB Sync
+====
+
+ su -s /bin/sh -c "cinder-manage db sync" cinder
+ Lots of
+ 2016-03-11 16:46:57.234 8897 INFO migrate.versioning.api [-] 58 -> 59... 
+2016-03-11 16:46:57.245 8897 INFO migrate.versioning.api [-] done
+2016-03-11 16:46:57.245 8897 INFO migrate.versioning.api [-] 59 -> 60... 
+2016-03-11 16:46:57.256 8897 INFO migrate.versioning.api [-] done
+[root@maersk src]# 
+ 
+ 
+====
+Finalize
+====
+
+systemctl restart openstack-nova-api.service
+
+systemctl enable openstack-cinder-api.service openstack-cinder-scheduler.service
+systemctl start openstack-cinder-api.service openstack-cinder-scheduler.service
+
+====================================================================================
+Install and configure a storage node¶
+====================================================================================
+http://docs.openstack.org/liberty/install-guide-rdo/cinder-storage-install.html
+
+
+
+yum install lvm2 -y
+(already done)
+
+Start the LVM metadata service and configure it to start when the system boots:
+systemctl enable lvm2-lvmetad.service
+systemctl start lvm2-lvmetad.service
+
+
+IMPORTANT    DON'T SCREW THIS UP AND USE YOUR LINUX DRIVE.
+
+/dev/sda  
+/dev/sdb  /dev/sdb1  /dev/sdb2  /dev/sdb3  /dev/sdb4
+
+REVERSE OF EXAMPLE
+/dev/sda <---  CINDER
+/dev/sdb ,---  OS
+
+/dev/sda appears to be the new drive.
+
+[root@maersk src]# pvcreate /dev/sda
+  Physical volume "/dev/sda" successfully created
+[root@maersk src]# vgcreate cinder-volumes /dev/sda
+  Volume group "cinder-volumes" successfully created
+[root@maersk src]# 
+
+Only instances can access Block Storage volumes. However, the underlying operating system manages the 
+devices associated with the volumes. By default, the LVM volume scanning tool scans the /dev directory 
+for block storage devices that contain volumes. If projects use LVM on their volumes, the scanning tool 
+detects these volumes and attempts to cache them which can cause a variety of problems with both the 
+underlying operating system and project volumes. You must reconfigure LVM to scan only the devices that 
+contain the cinder-volume volume group. Edit the /etc/lvm/lvm.conf file and complete the following actions:
+
+vi /etc/lvm/lvm.conf
+
+In the devices section, add a filter that accepts the /dev/sdb device and rejects all other devices:
+
+devices {
+...
+filter = [ "a/sdb/", "r/.*/"]
+
+BECAUSE THE OS USES LVM, WE NEED TO INCLUDE IT.
+filter = [ "a/sda/", "a/sdb/", "r/.*/"]
+
+use  vgs -vvvv  to test filters.
+
+====
+Install and Config
+====
+
+
+yum install openstack-cinder targetcli python-oslo-policy -y
+
+Already done
+
+
+
+[root@maersk src]# ./pluto.py process -p /etc  ../batch-files/liberty-cinder-storage-install.txt 
+Processing using file: ../batch-files/liberty-cinder-storage-install.txt
+BatchFileProcessor Processing merge file: ../batch-files/liberty-cinder-storage-install.txt
+BatchFileProcessor Running installation for: Liberty Cider Storage Node install
+BatchFileProcessor Updating configuration file: cinder.conf
++-----------------------+-------------------+-----------------------------------------------+
+| cinder: Section       | Key               | Value                                         |
++-----------------------+-------------------+-----------------------------------------------+
+| DEFAULT               | glance_host       | controller                                    |
+| DEFAULT               | enabled_backends  | lvm                                           |
+| DEFAULT               | verbose           | True                                          |
+| DEFAULT               | my_ip             | 172.22.10.99                                  |
+| DEFAULT               | auth_strategy     | keystone                                      |
+| DEFAULT               | rpc_backend       | rabbit                                        |
+| database              | connection        | mysql://cinder:sleestack191@controller/cinder |
+| keystone_authtoken    | password          | mk4968small23buggidntpass                     |
+| keystone_authtoken    | username          | cinder                                        |
+| keystone_authtoken    | project_name      | service                                       |
+| keystone_authtoken    | user_domain_id    | default                                       |
+| keystone_authtoken    | project_domain_id | default                                       |
+| keystone_authtoken    | auth_plugin       | password                                      |
+| keystone_authtoken    | auth_url          | http://controller:35357                       |
+| keystone_authtoken    | auth_uri          | http://controller:5000                        |
+| oslo_concurrency      | lock_path         | /var/lib/cinder/tmp                           |
+| oslo_messaging_rabbit | rabbit_password   | open.g00dke232                                |
+| oslo_messaging_rabbit | rabbit_userid     | openstack                                     |
+| oslo_messaging_rabbit | rabbit_host       | controller                                    |
+| lvm                   | iscsi_helper      | lioadm                                        |
+| lvm                   | iscsi_protocol    | iscsi                                         |
+| lvm                   | volume_group      | cinder-volumes                                |
+| lvm                   | volume_driver     | cinder.volume.drivers.lvm.LVMVolumeDriver     |
++-----------------------+-------------------+-----------------------------------------------+
+-------------------------------------------------
+FOLLOW POST CONFIG INSTRUCTIONS to insure conf files are correct.
+Make sure the [keystone_authtoken] section contains only the following.
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+auth_plugin = password
+project_domain_id = default
+user_domain_id = default
+project_name = service
+username = cinder
+password = CINDER_PASS (identity service password)
+[root@maersk src]# 
+
+
+
+====
+Finalize
+====
+
+systemctl enable openstack-cinder-volume.service target.service
+systemctl start openstack-cinder-volume.service target.service
+
+
+====
+Verify Operation
+====
+
+source admin-openrc.sh
+
+[root@maersk src]# cinder service-list
++------------------+------------+------+---------+-------+----------------------------+-----------------+
+|      Binary      |    Host    | Zone |  Status | State |         Updated_at         | Disabled Reason |
++------------------+------------+------+---------+-------+----------------------------+-----------------+
+| cinder-scheduler |   maersk   | nova | enabled |   up  | 2016-03-11T23:55:54.000000 |        -        |
+|  cinder-volume   | maersk@lvm | nova | enabled |   up  | 2016-03-11T23:55:54.000000 |        -        |
++------------------+------------+------+---------+-------+----------------------------+-----------------+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

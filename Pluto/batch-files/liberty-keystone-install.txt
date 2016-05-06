@@ -1,0 +1,52 @@
+# Pluto - Openstack Configuration Manager
+# Batch file for Openstack Liberty Keystone installation
+#
+&INSTALL_NOTE Liberty Keystone service initial install
+
+
+# ====================================================================================
+# Start of instructions from Openstack Install Guide
+# Make sure ADMIN_TOKEN and KEYSTONE_DBPASS are defined in variables.py
+
+
+# Edit the /etc/keystone/keystone.conf file and complete the following actions:
+&CONF_FILE_NAME keystone.conf
+
+# In the [DEFAULT] section, define the value of the initial administration token:
+
+[DEFAULT]
+...
+admin_token = ADMIN_TOKEN
+
+# In the [database] section, configure database access:
+
+[database]
+...
+connection = mysql://keystone:KEYSTONE_DBPASS@controller/keystone
+
+# In the [memcache] section, configure the Memcached service:
+
+[memcache]
+...
+servers = localhost:11211
+
+# In the [token] section, configure the UUID token provider and Memcached driver:
+
+[token]
+...
+provider = uuid
+driver = memcache
+
+# In the [revoke] section, configure the SQL revocation driver:
+
+[revoke]
+...
+driver = sql
+
+
+# (Optional) To assist with troubleshooting, enable verbose logging in the [DEFAULT] section:
+
+[DEFAULT]
+...
+verbose = True
+

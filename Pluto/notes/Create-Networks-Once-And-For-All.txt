@@ -1,0 +1,167 @@
+
+The Public Network MUST mimic the exisitng ATT network.
+
+
+neutron net-create kitty-net --shared --provider:physical_network public \
+   --provider:network_type flat
+
+Created a new network:
++---------------------------+--------------------------------------+
+| Field                     | Value                                |
++---------------------------+--------------------------------------+
+| admin_state_up            | True                                 |
+| id                        | 1a91767b-69c3-48c0-966d-1c3a5ec7fd4f |
+| mtu                       | 0                                    |
+| name                      | kitty-net                            |
+| port_security_enabled     | True                                 |
+| provider:network_type     | flat                                 |
+| provider:physical_network | public                               |
+| provider:segmentation_id  |                                      |
+| router:external           | False                                |
+| shared                    | True                                 |
+| status                    | ACTIVE                               |
+| subnets                   |                                      |
+| tenant_id                 | fdf3f98a9b0c4e9e94603d8a84ea41a8     |
++---------------------------+--------------------------------------+
+
+--- Create the Subnet.   Now HERE's the important part.   Make it encompass the
+entire actual ATT net so when we create a ROuter, the Router will actually WORK.
+WE DO NOT need to make a DHCP server on this net UNLESS we want to test it first.
+Is eomething goes wrong, we can switch DHCP on and create an instance on THIS
+net to see if the net works.
+
+search attlocal.net
+nameserver 172.22.10.254
+
+cat ifcfg-enp3s0
+GATEWAY=172.22.10.254
+DNS1=172.22.10.254
+
+Create kitty-net subnet on kitty-nen network.  The subnet will represent the entier network.
+
+neutron subnet-create kitty-net 172.22.10.0/24 --name kitty-net \
+   --allocation-pool start=172.22.10.1,end=172.22.10.254 \
+   --dns-nameserver 172.22.10.254 --gateway 172.22.10.254 --enable_dhcp False
+   
+   
+
+
+
+
+[sleestack@maersk src]$ cat /etc/sysconfig/network-scripts/ifcfg-enp3s0 
+TYPE=Ethernet
+BOOTPROTO=none
+DEFROUTE=yes
+IPV4_FAILURE_FATAL=no
+IPV6INIT=yes
+IPV6_AUTOCONF=yes
+IPV6_DEFROUTE=yes
+IPV6_FAILURE_FATAL=no
+NAME=maersk
+UUID=3c27c326-ef77-4550-8406-f007e74c03ba
+ONBOOT=yes
+IPADDR0=172.22.10.99
+PREFIX0=24
+GATEWAY=172.22.10.254
+DNS1=172.22.10.254
+DOMAIN=attlocal.net
+HWADDR=AC:9E:17:EC:5D:95
+IPV6_PEERDNS=yes
+IPV6_PEERROUTES=yes
+
+
+
+[sleestack@maersk src]$ neutron subnet-create kitty-net 172.22.10.0/24 --name kitty-net \
+>    --allocation-pool start=172.22.10.0,end=172.22.10.255 \
+>    --dns-nameserver 172.22.10.254 --gateway 172.22.10.254 --enable_dhcp False
+The allocation pool 172.22.10.0-172.22.10.255 spans beyond the subnet cidr 172.22.10.0/24.
+
+[sleestack@maersk src]$ neutron subnet-create kitty-net 172.22.10.0/24 --name kitty-net \
+>    --allocation-pool start=172.22.10.0,end=172.22.10.254 \
+>    --dns-nameserver 172.22.10.254 --gateway 172.22.10.254 --enable_dhcp False
+The allocation pool 172.22.10.0-172.22.10.254 spans beyond the subnet cidr 172.22.10.0/24.
+
+[sleestack@maersk src]$ neutron subnet-create kitty-net 172.22.10.0/24 --name kitty-net \
+>    --allocation-pool start=172.22.10.1,end=172.22.10.255 \
+>    --dns-nameserver 172.22.10.254 --gateway 172.22.10.254 --enable_dhcp False
+The allocation pool 172.22.10.1-172.22.10.255 spans beyond the subnet cidr 172.22.10.0/24.
+
+[sleestack@maersk src]$ neutron subnet-create kitty-net 172.22.10.0/24 --name kitty-net \
+>    --allocation-pool start=172.22.10.1,end=172.22.10.254 \
+>    --dns-nameserver 172.22.10.254 --gateway 172.22.10.254 --enable_dhcp False
+Gateway ip 172.22.10.254 conflicts with allocation pool 172.22.10.1-172.22.10.254
+
+Well  So much for THAT theory!!!!   FUCK!!!!!!
+
+
+[sleestack@maersk src]$ neutron net-update public --router:external
+Unable to find network with name 'public'
+[sleestack@maersk src]$ cat /etc/sysconfig/network-scripts/ifcfg-enp3s0 
+
+
+---------------------------
+Ok   Created Net and Subnet via GUI.
+
+
+
+[sleestack@maersk src]$ neutron subnet-show kitty-net  
++-------------------+--------------------------------------------------+
+| Field             | Value                                            |
++-------------------+--------------------------------------------------+
+| allocation_pools  | {"start": "172.22.10.10", "end": "172.22.10.90"} |
+| cidr              | 172.22.10.0/24                                   |
+| dns_nameservers   | 172.22.10.254                                    |
+| enable_dhcp       | True                                             |
+| gateway_ip        | 172.22.10.254                                    |
+| host_routes       |                                                  |
+| id                | 4619d49c-90c2-4f37-9b0d-abc1df18506d             |
+| ip_version        | 4                                                |
+| ipv6_address_mode |                                                  |
+| ipv6_ra_mode      |                                                  |
+| name              | kitty-net                                        |
+| network_id        | aed8da7d-2cf5-4d8b-83b5-343136b60d10             |
+| subnetpool_id     |                                                  |
+| tenant_id         | fdf3f98a9b0c4e9e94603d8a84ea41a8                 |
++-------------------+--------------------------------------------------+
+
+========================
+Trick the Router into using 254.   Create a subnet with only one address.  Disable gateway
+
+neutron subnet-create kitty-net 172.22.10.0/24 --name kitty-net \
+   --allocation-pool start=172.22.10.254,end=172.22.10.254 \
+   --dns-nameserver 172.22.10.254 --enable_dhcp False
+   
+Ok.  So it DID work.  Router gateway is now 254.  But still down.  Let's see if that even matters.
+
++-----------------------+-----------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                           |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | True                                                                                                            |
+| allowed_address_pairs |                                                                                                                 |
+| binding:host_id       | maersk                                                                                                          |
+| binding:profile       | {}                                                                                                              |
+| binding:vif_details   | {"port_filter": true}                                                                                           |
+| binding:vif_type      | bridge                                                                                                          |
+| binding:vnic_type     | normal                                                                                                          |
+| device_id             | 5dcaf3c3-bff6-4129-9e71-6be04ecdc710                                                                            |
+| device_owner          | network:router_gateway                                                                                          |
+| dns_assignment        | {"hostname": "host-172-22-10-254", "ip_address": "172.22.10.254", "fqdn": "host-172-22-10-254.openstacklocal."} |
+| dns_name              |                                                                                                                 |
+| extra_dhcp_opts       |                                                                                                                 |
+| fixed_ips             | {"subnet_id": "987d41d5-8454-4113-9f5f-949fa68184ec", "ip_address": "172.22.10.254"}                            |
+| id                    | 6889fc8d-466a-4fec-8571-ccf905384f31                                                                            |
+| mac_address           | fa:16:3e:c6:fc:10                                                                                               |
+| name                  |                                                                                                                 |
+| network_id            | aed8da7d-2cf5-4d8b-83b5-343136b60d10                                                                            |
+| port_security_enabled | False                                                                                                           |
+| security_groups       |                                                                                                                 |
+| status                | DOWN                                                                                                            |
+| tenant_id             |                                                                                                                 |
++-----------------------+-----------------------------------------------------------------------------------------------------------------+
+
+
+
+   
+   
+
+
