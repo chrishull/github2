@@ -1,0 +1,135 @@
+==========
+Setting up web.xml
+==========
+
+https://jersey.java.net/documentation/latest/deployment.html#environmenmt.appmodel
+
+http://localhost:8080/WebVideoDatabase/video/status
+
+
+==========
+Allowing MariaDB Access
+==========
+
+1 Place mariadb-java-client-foo.jar in WEB-INF/lib   This is for the final 
+deployment, but when running under Eclipse, Tomcat will still not find it.
+2. In Run Configurations, add the jar to the classpath for Tomcat.  Only then will 
+the connector be found.
+
+
+==========
+Log4j in a REST/Web envoronment.
+==========
+
+1: Place log4j.jar in WEB-INF/lib
+2: Place logj2.properties directly in /src   It will be deployed to WEB-INF/ where it will be found.
+
+If the .jar file is not located, you will see exceptions.  Nothing will work at all.
+If the .properties file can not be found will will see a somewhat less than helpful message from
+log4j itself sayiing something about appenders not being found.  
+"Tried finding log4j.xml and .properties at location /foo would have been much more useful frankly."
+
+=========
+Jersey does not automatically support JSON marshalling
+========
+
+Add this to web.xml
+        <init-param>
+            <param-name>com.sun.jersey.api.json.POJOMappingFeature</param-name>
+            <param-value>true</param-value>
+        </init-param>
+
+Get the jackson*.jar files.
+http://wiki.fasterxml.com/JacksonDownload
+
+
+
+
+com.cisco.esc.jaxb.parameters.Image;
+
+@Path("v0/images")
+@Api(value = "Images")
+public class ImagesResource {
+    static Logger log = Logger.getLogger(ImagesResource.class);
+    static ManagedObjectFactory moFactory = ManagedObjectUtil.getFactory();
+    private static final String IMAGE = "image";
+    @GET
+    @Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    @ApiOperation(
+            value = "Get all images",
+            notes = "All images created in ESC will be returned as a List",
+            response = Image.class,
+            responseContainer = "List")
+    public List<Image> getImages() {
+        RestUtils.logRestInEvent("Processing get images request: v0/images");
+        List<Image> images = new ArrayList<Image>();
+
+        List<IdMapDao> idList = moFactory.findAllByMOType(MOType.ImageDao);
+        List<ManagedObject> dbImages = moFactory.loadAllByIdList(idList);
+        Iterator<ManagedObject> imgIter = dbImages.iterator();
+        
+        
+        
+ @XmlRootElement(name = "image")
+public class Image extends AbstractParameter {
+
+        @SerializedName("tenant_id")
+    private String externalTenantId;
+    
+    @XmlElement(name = "external_tenant_id")
+    public String getExternalTenantId() {
+        return externalTenantId;
+    }
+
+    public void setExternalTenantId(String externalTenantId) {
+        this.externalTenantId = externalTenantId;
+    }
+    
+
+ 
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+			
+			
+============
+Log Vieweer for Eclipse
+http://logviewer.eclipselabs.org.codespot.com/git/de.anbos.eclipse.logviewer.update/
+Install only the Eclipse version.
+
+
+
+
+
+
+
+
+============
+XML works   JSON DOES NOT.
+
+std out shows this when trying to return APPLICATION_JSON
+SEVERE: MessageBodyWriter not found for media type=application/json, type=class co.spillikin.web.webcontacts.File, genericType=class co.spillikin.web.webcontacts.File.
+XML Works (probably because of jackson), but JSON doesn't work.  
+We need Genson.
+https://github.com/owlike/genson
+dropped genson.jar into WEB-INF/lib   IT JUST WORKS!  :-)
+
+REST get http://localhost:8080/WebVideoDatabase/video/file
+returns
+{"date":"same date 1","name":"Video name 1","path":"path to file","size":"1234"}
+
+
+
+
+
+
