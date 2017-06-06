@@ -1,7 +1,7 @@
 # github2
 Github public repo
 
-Small code snippets and projects dating back as far as 2004.  This is from the oldest part of my personal source repo.
+Small code snippets and projects dating back as far as 2004.  This is from the oldest part of my personal source repo.  Despite what the github tag says this code is written in C/C++ Python, Java and assembly.
 
 WebVideoDatabase:  A RESTful library API for my ancient VHS (now mp3) collection.  Uses JAX-RS Jersey / Tomcat / SQL. 
 Will have an Angular front end so videos can be searched, meta data edited, and played via browser or QTPlayer.
