@@ -1,7 +1,7 @@
 # github2
 Github public repo
 
-For the moment, this first repo contains both sample source code for potential employers as well as shared collaborations.  Duplicates of all of this exist on my own Git repo server.
+Small code snippets and projects dating back as far as 2004.  This is from the oldest part of my personal source repo.
 
 WebVideoDatabase:  A RESTful library API for my ancient VHS (now mp3) collection.  Uses JAX-RS Jersey / Tomcat / SQL. 
 Will have an Angular front end so videos can be searched, meta data edited, and played via browser or QTPlayer.
